@@ -8,11 +8,13 @@ import { useRouter } from "next/navigation"
 import { useRef, useState, useEffect } from "react"
 import { useHistory } from "@/components/history-provider"
 import { LoadingLogo } from "@/components/loading-logo"
+import { useAccessibility } from "@/components/accessibility-provider"
 
 export default function ScanPage() {
   const router = useRouter()
   const { toast } = useToast()
   const { addReport } = useHistory()
+  const { settings } = useAccessibility()
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -22,6 +24,42 @@ export default function ScanPage() {
   const [stream, setStream] = useState<MediaStream | null>(null)
   const [errorMessage, setErrorMessage] = useState("")
   const [capturedImageUrl, setCapturedImageUrl] = useState<string | null>(null)
+
+  // A11y: Announce camera status to screen readers
+  useEffect(() => {
+    // Create an alert for screen readers when camera state changes
+    let message = ""
+    switch (cameraState) {
+      case "initializing":
+        message = "Camera is initializing. Please wait."
+        break
+      case "ready":
+        message = "Camera is ready. You can now take a photo."
+        break
+      case "error":
+        message = `Camera error: ${errorMessage}`
+        break
+      case "not-supported":
+        message = "Camera is not supported on this device."
+        break
+    }
+    
+    if (message && settings.screenReaderOptimized) {
+      // Create and manage a live region for screen reader announcements
+      const liveRegion = document.createElement("div")
+      liveRegion.setAttribute("aria-live", "polite")
+      liveRegion.setAttribute("aria-atomic", "true")
+      liveRegion.className = "sr-only"
+      liveRegion.textContent = message
+      
+      document.body.appendChild(liveRegion)
+      
+      // Remove after announcement is likely complete
+      setTimeout(() => {
+        document.body.removeChild(liveRegion)
+      }, 3000)
+    }
+  }, [cameraState, errorMessage, settings.screenReaderOptimized])
 
   // Initialize camera on component mount
   useEffect(() => {
@@ -203,49 +241,40 @@ export default function ScanPage() {
       return
     }
 
-    // Set canvas dimensions to match video
+    // Match canvas size to video dimensions for proper capture
     canvas.width = video.videoWidth
     canvas.height = video.videoHeight
 
-    console.log(`Canvas dimensions set to ${canvas.width}x${canvas.height}`)
+    // Draw the current video frame to canvas
+    context.drawImage(video, 0, 0, canvas.width, canvas.height)
 
-    // Draw video frame to canvas
     try {
-      // Clear canvas first
-      context.clearRect(0, 0, canvas.width, canvas.height)
+      // Convert canvas to image URL
+      const imageUrl = canvas.toDataURL("image/jpeg", 0.9)
+      setCapturedImageUrl(imageUrl)
+
+      // Pause the video stream
+      video.pause()
+
+      setIsCaptured(true)
       
-      // Ensure video is playing and ready
-      if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        context.drawImage(video, 0, 0, canvas.width, canvas.height)
-        console.log("Image captured successfully")
-
-        // Get image data from canvas
-        const imageUrl = canvas.toDataURL("image/jpeg", 0.8)
-        setCapturedImageUrl(imageUrl)
-
-        // Set captured state
-        setIsCaptured(true)
-
-        // Stop camera after capture to save battery/resources
-        if (stream) {
-          stream.getTracks().forEach((track) => track.stop())
-          setStream(null)
-        }
-
-        // Automatically start analysis
-        analyzeImage(imageUrl)
-      } else {
-        toast({
-          title: "Capture Error",
-          description: "Video not ready. Please wait a moment and try again.",
-          variant: "destructive",
-        })
+      // A11y: Announce to screen readers that photo was captured
+      if (settings.screenReaderOptimized) {
+        const liveRegion = document.createElement("div")
+        liveRegion.setAttribute("aria-live", "assertive")
+        liveRegion.className = "sr-only"
+        liveRegion.textContent = "Photo captured successfully. Ready for analysis."
+        document.body.appendChild(liveRegion)
+        setTimeout(() => document.body.removeChild(liveRegion), 3000)
       }
+
+      // Automatically start analysis after capture
+      analyzeImage(imageUrl)
     } catch (err) {
-      console.error("Error capturing image:", err)
+      console.error("Error generating image:", err)
       toast({
-        title: "Capture Error",
-        description: "Could not capture image. Please try again.",
+        title: "Processing Error",
+        description: "Could not process captured image. Please try again.",
         variant: "destructive",
       })
     }
@@ -466,107 +495,163 @@ export default function ScanPage() {
     console.log("Camera state changed:", cameraState)
   }, [cameraState])
 
+  // A11y: Add keyboard support for camera controls
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.code === "Space" || e.code === "Enter") {
+      e.preventDefault() // Prevent scrolling on spacebar
+      if (cameraState === "ready" && !isCaptured) {
+        captureImage()
+      } else if (isCaptured && !isAnalyzing) {
+        retakePhoto()
+      }
+    }
+  }
+
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-900">
+    <div 
+      className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-900"
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+      role="application"
+      aria-label="Skin condition scanner"
+    >
       <header className="p-4 flex items-center border-b border-slate-200 dark:border-slate-800">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => router.back()}
+          aria-label="Go back to previous page"
+        >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <h1 className="ml-4 text-xl font-semibold text-slate-800 dark:text-white">Skin Scan</h1>
+        <h1 className="ml-4 text-xl font-semibold text-slate-800 dark:text-white">Scan Skin Condition</h1>
       </header>
 
       <main className="flex-1 container max-w-md mx-auto p-4 flex flex-col">
-        <Card className="w-full aspect-square overflow-hidden relative mb-4">
-          {/* Always render the video element but hide it when not needed */}
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            className={`w-full h-full object-cover ${cameraState !== "ready" || isCaptured ? "hidden" : ""}`}
-            onError={(e) => {
-              console.error("Video element error:", e)
-              setCameraState("error")
-              setErrorMessage("Video playback error: " + (e.currentTarget.error?.message || "Unknown error"))
-            }}
-          />
+        <div className="flex flex-col flex-1 justify-center items-center space-y-8">
+          {/* Camera viewfinder / captured image */}
+          <Card className="relative aspect-square w-full overflow-hidden">
+            {/* Video stream for camera */}
+            {!isCaptured && (
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className={`absolute inset-0 w-full h-full object-cover ${
+                  cameraState !== "ready" ? "opacity-0" : ""
+                }`}
+                aria-hidden="true"
+              />
+            )}
 
-          {/* Captured image */}
-          <div className={`relative w-full h-full ${!isCaptured ? "hidden" : ""}`}>
-            <canvas ref={canvasRef} className="w-full h-full object-cover" />
-            {isAnalyzing && (
-              <div className="absolute inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center">
-                <LoadingLogo size="md" />
-                <p className="text-white mt-4 animate-pulse">Analyzing skin condition...</p>
+            {/* Canvas for capturing (hidden) */}
+            <canvas ref={canvasRef} className="hidden" aria-hidden="true" />
+
+            {/* Captured image display */}
+            {isCaptured && capturedImageUrl && (
+              <div className="absolute inset-0 w-full h-full">
+                <img
+                  src={capturedImageUrl}
+                  alt="Captured skin condition"
+                  className="w-full h-full object-cover"
+                />
               </div>
             )}
-          </div>
 
-          {/* Camera initializing */}
-          {cameraState === "initializing" && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-100 dark:bg-slate-800">
-              <LoadingLogo />
-              <p className="text-slate-500 dark:text-slate-400 mt-4">Initializing camera...</p>
-            </div>
-          )}
-
-          {/* Camera error */}
-          {cameraState === "error" && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-100 dark:bg-slate-800 p-6 text-center">
-              <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-              <h3 className="text-lg font-medium text-slate-800 dark:text-white mb-2">Camera Error</h3>
-              <p className="text-slate-500 dark:text-slate-400 mb-4">{errorMessage}</p>
-              <div className="flex flex-col gap-2 w-full max-w-xs">
-                <Button onClick={retryCamera} variant="outline" className="w-full">
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Retry Camera
-                </Button>
-                <Button onClick={goToUpload} className="w-full">
-                  Upload Image Instead
-                </Button>
+            {/* Loading overlay for initialization */}
+            {cameraState === "initializing" && (
+              <div className="absolute inset-0 flex items-center justify-center bg-slate-100/80 dark:bg-slate-800/80 z-10">
+                <LoadingLogo size="md" />
+                <span className="sr-only">Loading camera, please wait</span>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Camera not supported */}
-          {cameraState === "not-supported" && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-100 dark:bg-slate-800 p-6 text-center">
-              <AlertCircle className="h-12 w-12 text-amber-500 mb-4" />
-              <h3 className="text-lg font-medium text-slate-800 dark:text-white mb-2">Camera Not Supported</h3>
-              <p className="text-slate-500 dark:text-slate-400 mb-4">
-                Your device or browser doesn't support camera access.
-              </p>
-              <Button onClick={goToUpload} className="w-full max-w-xs">
-                Upload Image Instead
+            {/* Error message overlay */}
+            {(cameraState === "error" || cameraState === "not-supported") && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 bg-slate-100 dark:bg-slate-800 space-y-4">
+                <AlertCircle className="h-12 w-12 text-red-500" aria-hidden="true" />
+                <h3 className="text-lg font-medium text-slate-900 dark:text-white text-center" id="error-heading">
+                  Camera Error
+                </h3>
+                <p
+                  className="text-slate-600 dark:text-slate-300 text-center"
+                  id="error-description"
+                  aria-describedby="error-heading"
+                >
+                  {errorMessage}
+                </p>
+
+                <div className="flex space-x-3">
+                  <Button
+                    variant="outline"
+                    className="mt-2"
+                    onClick={retryCamera}
+                    aria-label="Try accessing camera again"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" aria-hidden="true" />
+                    Retry
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="mt-2"
+                    onClick={goToUpload}
+                    aria-label="Go to manual image upload page"
+                  >
+                    Upload Photo
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Loading overlay during analysis */}
+            {isAnalyzing && (
+              <div className="absolute inset-0 flex items-center justify-center bg-slate-100/80 dark:bg-slate-800/80 z-10">
+                <div className="flex flex-col items-center space-y-3">
+                  <LoadingLogo size="md" />
+                  <p className="text-slate-600 dark:text-slate-300 animate-pulse text-center">
+                    Analyzing skin condition...
+                  </p>
+                  <span className="sr-only" aria-live="polite">
+                    Your image is being analyzed. This may take a few moments.
+                  </span>
+                </div>
+              </div>
+            )}
+          </Card>
+
+          {/* Camera controls */}
+          <div className="w-full">
+            {!isCaptured && cameraState === "ready" && (
+              <Button
+                className="w-full py-6 bg-teal-500 hover:bg-teal-600 dark:bg-teal-600 dark:hover:bg-teal-700"
+                onClick={captureImage}
+                aria-label="Take a photo of your skin condition"
+              >
+                <Camera className="h-5 w-5 mr-2" aria-hidden="true" />
+                Capture Image
               </Button>
-            </div>
-          )}
-        </Card>
+            )}
 
-        <div className="mt-auto space-y-4">
-          {/* Camera ready but not captured yet */}
-          {cameraState === "ready" && !isCaptured && (
-            <Button
-              className="w-full py-6 bg-teal-500 hover:bg-teal-600 dark:bg-teal-600 dark:hover:bg-teal-700"
-              onClick={captureImage}
-            >
-              <Camera className="mr-2 h-5 w-5" />
-              Capture Image
-            </Button>
-          )}
+            {isCaptured && !isAnalyzing && (
+              <Button
+                variant="outline"
+                className="w-full py-6"
+                onClick={retakePhoto}
+                aria-label="Retake the photo"
+              >
+                <RefreshCw className="h-5 w-5 mr-2" aria-hidden="true" />
+                Retake Photo
+              </Button>
+            )}
 
-          {/* Image captured and analyzing - show cancel button */}
-          {isCaptured && isAnalyzing && (
-            <Button variant="outline" className="w-full" onClick={retakePhoto}>
-              Cancel Analysis
-            </Button>
-          )}
-
-          {/* Show upload alternative when initializing */}
-          {cameraState === "initializing" && (
-            <Button variant="outline" className="w-full" onClick={goToUpload}>
-              Upload Image Instead
-            </Button>
-          )}
+            {/* Accessibility guidance */}
+            {!isCaptured && cameraState === "ready" && (
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 text-center">
+                Press Space or Enter key to capture when focused.
+              </p>
+            )}
+          </div>
         </div>
       </main>
     </div>

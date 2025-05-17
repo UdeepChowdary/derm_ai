@@ -33,6 +33,10 @@
     --ring: 173 80% 40%;
 
     --radius: 0.5rem;
+    
+    /* Focus styles */
+    --focus-ring: 173 80% 40%;
+    --focus-ring-width: 2px;
   }
 
   .dark {
@@ -63,6 +67,10 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 173 80% 40%;
+    
+    /* Focus styles */
+    --focus-ring: 173 80% 60%;
+    --focus-ring-width: 2px;
   }
 }
 
@@ -75,6 +83,105 @@
   }
 }
 
+/* Accessibility styles */
+.a11y-high-contrast {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 0%;
+  --primary: 200 100% 35%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 85%;
+  --secondary-foreground: 0 0% 0%;
+  --border: 0 0% 0%;
+  --focus-ring: 0 100% 50%;
+  --focus-ring-width: 3px;
+  
+  & .dark {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    --primary: 200 100% 65%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 0 0% 25%;
+    --secondary-foreground: 0 0% 100%;
+    --border: 0 0% 100%;
+    --focus-ring: 60 100% 50%;
+    --focus-ring-width: 3px;
+  }
+  
+  & a, & button, & input, & select, & textarea {
+    @apply outline-2 outline-offset-2;
+  }
+  
+  & *:focus {
+    outline: var(--focus-ring-width) solid hsl(var(--focus-ring)) !important;
+  }
+}
+
+.a11y-large-text {
+  font-size: 120% !important;
+  
+  & h1 {
+    font-size: 2.5rem !important;
+  }
+  
+  & h2 {
+    font-size: 2rem !important;
+  }
+  
+  & h3 {
+    font-size: 1.75rem !important;
+  }
+  
+  & p, & li, & button, & input, & label {
+    font-size: 1.2rem !important;
+  }
+}
+
+.a11y-reduced-motion * {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* Increased spacing for readability */
+html[data-line-spacing="wide"] {
+  & p, & li, & label, & div {
+    line-height: 1.8 !important;
+  }
+}
+
+html[data-line-spacing="wider"] {
+  & p, & li, & label, & div {
+    line-height: 2.2 !important;
+  }
+}
+
+html[data-letter-spacing="wide"] {
+  & p, & li, & label, & div {
+    letter-spacing: 0.025em !important;
+  }
+}
+
+html[data-letter-spacing="wider"] {
+  & p, & li, & label, & div {
+    letter-spacing: 0.05em !important;
+  }
+}
+
+/* Focus ring for keyboard users */
+*:focus-visible {
+  outline: var(--focus-ring-width) solid hsl(var(--focus-ring)) !important;
+  outline-offset: 2px;
+}
+
+/* Skip to content link */
+.skip-to-content {
+  @apply sr-only absolute z-50 bg-background text-foreground px-4 py-2 border-2 border-primary;
+}
+
+.skip-to-content:focus {
+  @apply not-sr-only top-2 left-2;
+}
+
+/* Original animations */
 @keyframes pulse-glow {
   0%,
   100% {
@@ -121,4 +228,14 @@
 .animate-ripple {
   position: relative;
   overflow: hidden;
+}
+
+/* Prevent animations for reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

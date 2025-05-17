@@ -5,6 +5,10 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import { HistoryProvider } from "@/components/history-provider"
 import { AnimatedFavicon } from "@/components/app-icons/animated-favicon"
+import { AccessibilityProvider } from "@/components/accessibility-provider"
+import { AccessibilitySettings } from "@/components/accessibility-settings"
+import { AudioAccessibility } from "@/components/audio-accessibility"
+import { SkipToContent } from "@/components/skip-to-content"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -18,7 +22,20 @@ export const metadata: Metadata = {
     ],
     apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
-    generator: 'v0.dev'
+  generator: 'v0.dev',
+  applicationName: "Derm AI",
+  appleWebApp: {
+    title: "Derm AI",
+    statusBarStyle: "default",
+  },
+  authors: [
+    { name: "Derm AI Team" }
+  ],
+  formatDetection: {
+    telephone: true,
+    address: true,
+    email: true,
+  },
 }
 
 export default function RootLayout({
@@ -31,8 +48,17 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <HistoryProvider>
-            <AnimatedFavicon />
-            {children}
+            <AccessibilityProvider>
+              <SkipToContent />
+              <AnimatedFavicon />
+              <main id="main-content" tabIndex={-1}>
+                {children}
+              </main>
+              <AccessibilitySettings />
+              <AudioAccessibility 
+                audioDescription="Welcome to Derm AI, your skin health assistant. Use the navigation at the bottom of the screen to explore the app."
+              />
+            </AccessibilityProvider>
           </HistoryProvider>
         </ThemeProvider>
       </body>
