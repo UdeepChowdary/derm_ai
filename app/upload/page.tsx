@@ -11,8 +11,6 @@ import { useRef, useState } from "react"
 import { useHistory } from "@/components/history-provider"
 import Image from "next/image"
 import { LoadingLogo } from "@/components/loading-logo"
-import { ConsentModal } from '@/components/consent-modal';
-import clinicalData from '@/../app/clinical-data/condition-mappings.json';
 
 export default function UploadPage() {
   const router = useRouter()
@@ -31,25 +29,13 @@ export default function UploadPage() {
   const processFile = (file?: File) => {
     if (!file) return
 
-    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-    const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-
-    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+    if (!file.type.startsWith("image/")) {
       toast({
-        title: "Invalid File Type",
-        description: "Please choose a JPEG, PNG, or WEBP image file.",
+        title: "Invalid File",
+        description: "Please select an image file.",
         variant: "destructive",
-      });
-      return;
-    }
-
-    if (file.size > MAX_FILE_SIZE) {
-      toast({
-        title: "File Too Large",
-        description: "Please choose an image smaller than 5MB.",
-        variant: "destructive",
-      });
-      return;
+      })
+      return
     }
 
     const reader = new FileReader()
@@ -89,107 +75,184 @@ export default function UploadPage() {
     }
   }
 
-  const { toast } = useToast();
-  const [consentResolver, setConsentResolver] = useState<((value: boolean) => void) | null>(null);
-  const [hasGivenConsent, setHasGivenConsent] = useState<boolean | null>(null);
+  const analyzeImage = () => {
+    if (!selectedImage) return
 
-  useEffect(() => {
-    // Check local storage for consent status on mount
-    const consentStatus = localStorage.getItem('derm_ai_consent');
-    if (consentStatus === 'granted') {
-      setHasGivenConsent(true);
-    } else if (consentStatus === 'denied') {
-      setHasGivenConsent(false);
-    } else {
-      setHasGivenConsent(null); // Show modal if no status found
-    }
-  }, []);
-
-  const handleConsent = (allowed: boolean) => {
-    setHasGivenConsent(allowed);
-    localStorage.setItem('derm_ai_consent', allowed ? 'granted' : 'denied');
-    if (consentResolver) {
-      consentResolver(allowed);
-      setConsentResolver(null);
-    }
-  };
-
-  const analyzeImage = async () => {
-    if (!selectedImage) return;
-
-    // Check consent status before proceeding
-    if (hasGivenConsent === null) {
-      // If consent status is unknown, wait for the modal interaction
-      const consentGranted = await new Promise<boolean>(resolve => {
-        setConsentResolver(() => resolve);
-      });
-      if (!consentGranted) {
-        toast({ title: "Analysis canceled", description: "You must consent to continue." });
-        return;
-      }
-    } else if (hasGivenConsent === false) {
-      // If consent was previously denied
-      toast({ title: "Analysis canceled", description: "You must consent to continue." });
-      return;
-    }
-
-    setIsAnalyzing(true);
-    // Integrated clinical data mapping
-    recommendations: clinicalData.mappings
-      .find(m => m.autodermClass === primaryPrediction?.class)
-      ?.recommendations || autodermResult.recommendations,
-  clinicalData: clinicalData.mappings
-    .find(m => m.autodermClass === primaryPrediction?.class)
-    ?.recommendations || autodermResult.recommendations,
-  // Replace the existing ConsentModal rendering logic with this:
-  {hasGivenConsent === null && <ConsentModal onConsent={handleConsent} />}
-{consentResolver && <ConsentModal onConsent={allowed => {
-  consentResolver(allowed);
-  setConsentResolver(null);
-}} />}
-
-    console.log("Analysis complete, generating report", analysisResult);
-
-    // Map the API response to the report data structure
-    let mappedClinicalData = null;
-    let mappedRecommendations = analysisResult.recommendations || [];
+    setIsAnalyzing(true)
 
     try {
-      const primaryPrediction = analysisResult.predictions?.[0];
-      if (primaryPrediction?.class) {
-        mappedClinicalData = clinicalData.mappings.find(
-          (m) => m.autodermClass === primaryPrediction.class
-        );
-        if (mappedClinicalData?.recommendations) {
-          mappedRecommendations = mappedClinicalData.recommendations;
+      // Simulate analysis delay (in a real app, this would be an API call)
+      setTimeout(() => {
+        try {
+          console.log("Analysis complete, generating report")
+
+          // Generate mock report data with more realistic content
+          const conditions = [
+            {
+              name: "Contact Dermatitis",
+              description:
+                "Inflammation caused by contact with a substance that irritates the skin or causes an allergic reaction.",
+              severity: "Mild to Moderate",
+              recommendations: [
+                "Avoid the irritant or allergen",
+                "Apply cool, wet compresses",
+                "Use over-the-counter anti-itch creams",
+                "Take oral antihistamines for itching",
+              ],
+            },
+            {
+              name: "Atopic Dermatitis (Eczema)",
+              description: "A chronic skin condition characterized by itchy, inflamed skin with red, scaly patches.",
+              severity: "Moderate",
+              recommendations: [
+                "Moisturize skin at least twice daily",
+                "Avoid harsh soaps and irritants",
+                "Apply prescribed topical corticosteroids",
+                "Consider antihistamines for itching",
+                "Keep fingernails short to prevent damage from scratching",
+              ],
+            },
+            {
+              name: "Psoriasis",
+              description:
+                "An autoimmune condition causing rapid skin cell growth, resulting in thick, red patches with silvery scales.",
+              severity: "Moderate to Severe",
+              recommendations: [
+                "Use medicated creams or ointments",
+                "Consider phototherapy treatment",
+                "Keep skin moisturized",
+                "Avoid triggers like stress and alcohol",
+                "Consult a dermatologist for prescription treatments",
+              ],
+            },
+          ]
+
+          // Select a random condition for the demo
+          const selectedCondition = conditions[Math.floor(Math.random() * conditions.length)]
+
+          // Generate mock report data
+          const reportData = {
+            id: Date.now().toString(),
+            date: new Date().toISOString(),
+            condition: selectedCondition.name,
+            description: selectedCondition.description,
+            severity: selectedCondition.severity,
+            recommendations: selectedCondition.recommendations,
+            imageUrl: selectedImage,
+          }
+
+          // Add to history
+          addReport(reportData)
+
+          // Navigate to report page
+          router.push(`/report/${reportData.id}`)
+        } catch (err) {
+          console.error("Error generating report:", err)
+          setIsAnalyzing(false)
+          toast({
+            title: "Analysis Error",
+            description: "Could not generate report. Please try again.",
+            variant: "destructive",
+          })
         }
-      }
-    } catch (mappingError) {
-      console.error("Error during clinical data mapping:", mappingError);
+      }, 2000)
+    } catch (err) {
+      console.error("Error processing image:", err)
+      setIsAnalyzing(false)
       toast({
-        title: "Mapping Error",
-        description: "Could not map clinical data. Using default recommendations.",
-        variant: "warning",
-      });
+        title: "Analysis Error",
+        description: "Could not process image. Please try again.",
+        variant: "destructive",
+      })
     }
+  }
 
-    const reportData = {
-      id: Date.now().toString(),
-      date: new Date().toISOString(),
-      condition: analysisResult.condition || 'Unknown Condition',
-      description: analysisResult.description || 'No description provided.',
-      severity: analysisResult.severity || 'Unknown Severity',
-      recommendations: mappedRecommendations,
-      imageUrl: selectedImage,
-      clinicalData: mappedClinicalData, // Include mapped clinical data
-    };
+  return (
+    <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-900">
+      <header className="p-4 flex items-center border-b border-slate-200 dark:border-slate-800">
+        <Button variant="ghost" size="icon" onClick={() => router.back()}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <h1 className="ml-4 text-xl font-semibold text-slate-800 dark:text-white">Upload Image</h1>
+      </header>
 
-    // Add to history
-    addReport(reportData);
-    setIsAnalyzing(false);
-  };
-{hasGivenConsent === null && <ConsentModal onConsent={handleConsent} />}
-{consentResolver && <ConsentModal onConsent={allowed => {
-  consentResolver(allowed);
-  setConsentResolver(null);
-}} />}
+      <main className="flex-1 container max-w-md mx-auto p-4 flex flex-col">
+        <Card
+          className={`w-full aspect-square overflow-hidden relative mb-4 ${
+            isDragging ? "border-2 border-dashed border-teal-500" : ""
+          }`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {selectedImage ? (
+            <div className="relative w-full h-full">
+              <Image
+                src={selectedImage || "/placeholder.svg"}
+                alt="Selected skin image"
+                fill
+                className="object-cover"
+              />
+              <Button
+                variant="destructive"
+                size="icon"
+                className="absolute top-2 right-2 rounded-full"
+                onClick={clearSelectedImage}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-100 dark:bg-slate-800 p-6">
+              <Upload className="h-12 w-12 text-slate-400 dark:text-slate-500 mb-4" />
+              <p className="text-slate-500 dark:text-slate-400 text-center mb-2">
+                {isDragging ? "Drop your image here" : "Select an image of the skin condition you want to analyze"}
+              </p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 text-center">Drag and drop or click to browse</p>
+            </div>
+          )}
+        </Card>
+
+        <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={handleFileChange} />
+
+        <div className="mt-auto space-y-4">
+          {!selectedImage ? (
+            <Button
+              className="w-full py-6 bg-teal-500 hover:bg-teal-600 dark:bg-teal-600 dark:hover:bg-teal-700"
+              onClick={triggerFileInput}
+            >
+              <Upload className="mr-2 h-5 w-5" />
+              Select Image
+            </Button>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <Button
+                className="w-full py-6 bg-teal-500 hover:bg-teal-600 dark:bg-teal-600 dark:hover:bg-teal-700"
+                onClick={analyzeImage}
+                disabled={isAnalyzing}
+              >
+                {isAnalyzing ? (
+                  <div className="flex items-center">
+                    <div className="w-5 h-5 mr-2">
+                      <LoadingLogo />
+                    </div>
+                    <span>Analyzing...</span>
+                  </div>
+                ) : (
+                  <>Analyze Skin Condition</>
+                )}
+              </Button>
+
+              <Button variant="outline" className="w-full" onClick={triggerFileInput} disabled={isAnalyzing}>
+                Choose Different Image
+              </Button>
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
+  )
+}
+
+// Integrated clinical data mapping
+recommendations: clinicalData.mappings
