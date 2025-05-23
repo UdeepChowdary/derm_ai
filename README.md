@@ -4,64 +4,47 @@
 The application is deployed on Vercel and can be accessed at:
 https://derm-ai-eight.vercel.app
 
-To deploy your own instance:
-1. Fork this repository
-2. Create a Vercel account if you haven't already
-3. Connect your GitHub repository to Vercel
-4. Deploy with default settings (Vercel will automatically detect Next.js configuration)
 
-## 💅 UI/UX Documentation
 
-### Design System
-The application uses a modern, accessible design system built with:
-- Tailwind CSS for styling
-- Radix UI for accessible components
-- Next.js 15+ for the framework
-- Custom shadcn/ui components for consistent design
+## 🩺 Project Overview
+Derm AI is a modern, accessible web application for automated skin condition analysis using AI. It integrates with the Autoderm API for real-time image classification, provides actionable clinical recommendations, and ensures user privacy and compliance.
 
-### Key UI/UX Features
-1. **Responsive Design**
-   - Mobile-first approach
-   - Adapts seamlessly to all screen sizes
-   - Touch-friendly interface
+## 🏗️ Architecture & Main Features
+- **Next.js 15+** with React 18 and TypeScript for robust, scalable frontend and backend.
+- **Autoderm API Integration**: Securely sends user images for AI-powered dermatological analysis.
+- **Consent Flow**: GDPR-compliant consent modal before any data processing.
+- **Clinical Data Mapping**: Maps AI results to ICD-11 codes and urgency levels using `app/clinical-data/condition-mappings.json`.
+- **Frontend Validation**: File type, size, and drag-and-drop support for uploads.
+- **Error Handling**: User-friendly error messages for validation, API, and network issues.
+- **Accessibility**: WCAG 2.1 compliant, keyboard navigation, screen reader support, high-contrast mode.
+- **Responsive UI**: Mobile-first, touch-friendly, dark/light mode, animated feedback.
+- **Report Generation**: Downloadable PDF reports with clinical recommendations.
+- **History & User Accounts**: (If enabled) Secure report history and authentication.
 
-2. **Accessibility**
-   - WCAG 2.1 compliant
-   - Screen reader friendly
-   - Keyboard navigation support
-   - High contrast mode available
-
-3. **User Interface Components**
-   - Clean, minimal design
-   - Consistent spacing and typography
-   - Clear visual hierarchy
-   - Loading states and animations
-   - Toast notifications for feedback
-
-4. **Color Scheme**
-   - Primary: Modern medical-themed palette
-   - Secondary accents for important actions
-   - Dark/Light mode support
-
-5. **Navigation**
-   - Intuitive menu structure
-   - Breadcrumb navigation
-   - Clear call-to-action buttons
-
-### User Experience Flow
-1. Landing page with clear value proposition
-2. Simple onboarding process
-3. Easy-to-use diagnostic interface
-4. Clear results presentation
-5. Actionable next steps
+## 🗂️ Project Structure
+- `app/api/classify/route.ts`: Handles image analysis requests, validates input, calls Autoderm API, and returns structured results.
+- `app/upload/page.tsx`: Main upload interface, consent modal, image validation, and analysis trigger.
+- `app/components/consent-modal.tsx`: Modal for user consent before analysis.
+- `app/clinical-data/condition-mappings.json`: Maps AI classes to ICD-11, urgency, and recommendations.
+- `components/ui/`: Custom UI components (cards, buttons, dialogs, etc.)
+- `hooks/`: Custom React hooks for toast notifications and mobile detection.
+- `public/`: Static assets and placeholder images.
 
 ## 🛠️ Tech Stack
-- Next.js 15+
-- React 18
-- TypeScript
-- Tailwind CSS
-- Radix UI Components
-- Vercel Hosting
+- Next.js 15+, React 18, TypeScript
+- Tailwind CSS, shadcn/ui, Radix UI
+- Zod for schema validation
+- Vercel for hosting
+
+## 🔒 Privacy & Compliance
+- **Consent Modal**: Users must accept data usage terms before analysis.
+- **Anonymization**: Images are anonymized and not stored after analysis.
+- **GDPR**: No personal data is retained; all processing is transparent.
+
+## 🧑‍⚕️ Clinical Data Handling
+- Results are mapped to ICD-11 codes and urgency levels.
+- Recommendations are provided for each condition (see `app/clinical-data/condition-mappings.json`).
+- Easily extensible for new conditions and mappings.
 
 ## 📝 Local Development
 ```bash
@@ -77,8 +60,29 @@ npm run build
 # Start production server
 npm run start
 ```
-
 Visit [http://localhost:3000](http://localhost:3000) to see the application running locally.
+
+### Environment Variables
+- `AUTODERM_API_KEY`: Required for Autoderm API integration. Set in your Vercel/hosting environment.
+
+## 🧩 Future Roadmap
+- Multilingual support for global accessibility
+- Real-time analysis progress bar
+- Expanded clinical condition mappings
+- Dermatologist review workflow
+- User authentication and secure report history
+- Enhanced PDF export and sharing
+
+## 💅 UI/UX Documentation
+### Design System
+- Tailwind CSS, Radix UI, shadcn/ui
+- Consistent, accessible, modern medical-themed palette
+
+### Key UI/UX Features
+- Responsive, mobile-first design
+- Accessibility (WCAG 2.1, keyboard, screen reader, high contrast)
+- Clean, minimal interface with clear feedback
+- Intuitive navigation and actionable next steps
 
 ## 📄 License
 MIT License - See LICENSE file for details

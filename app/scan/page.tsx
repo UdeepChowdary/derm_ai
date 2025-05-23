@@ -333,7 +333,7 @@ export default function ScanPage() {
   }
 
   // Analyze the captured image
-  const analyzeImage = (imageUrl: string) => {
+  const analyzeImage = async (imageUrl: string) => {
     console.log("Analyzing captured image")
     setIsAnalyzing(true)
 
@@ -343,90 +343,50 @@ export default function ScanPage() {
         throw new Error("No image data available for analysis");
       }
       
-      // Simulate analysis delay (in a real app, this would be an API call)
-      setTimeout(() => {
-        try {
-          console.log("Analysis complete, generating report")
+      // Call the backend API for analysis
+      const response = await fetch('/api/classify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ image: imageUrl }), // Send image data (base64 string)
+      });
 
-          // Generate mock report data with more realistic content
-          const conditions = [
-            {
-              name: "Contact Dermatitis",
-              description:
-                "Inflammation caused by contact with a substance that irritates the skin or causes an allergic reaction.",
-              severity: "Mild to Moderate",
-              recommendations: [
-                "Avoid the irritant or allergen",
-                "Apply cool, wet compresses",
-                "Use over-the-counter anti-itch creams",
-                "Take oral antihistamines for itching",
-              ],
-            },
-            {
-              name: "Atopic Dermatitis (Eczema)",
-              description: "A chronic skin condition characterized by itchy, inflamed skin with red, scaly patches.",
-              severity: "Moderate",
-              recommendations: [
-                "Moisturize skin at least twice daily",
-                "Avoid harsh soaps and irritants",
-                "Apply prescribed topical corticosteroids",
-                "Consider antihistamines for itching",
-                "Keep fingernails short to prevent damage from scratching",
-              ],
-            },
-            {
-              name: "Psoriasis",
-              description:
-                "An autoimmune condition causing rapid skin cell growth, resulting in thick, red patches with silvery scales.",
-              severity: "Moderate to Severe",
-              recommendations: [
-                "Use medicated creams or ointments",
-                "Consider phototherapy treatment",
-                "Keep skin moisturized",
-                "Avoid triggers like stress and alcohol",
-                "Consult a dermatologist for prescription treatments",
-              ],
-            },
-          ]
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to analyze image');
+      }
 
-          // Select a random condition for the demo
-          const selectedCondition = conditions[Math.floor(Math.random() * conditions.length)]
+      const analysisResult = await response.json();
+      console.log("Analysis complete, generating report from scan", analysisResult);
 
-          const reportData = {
-            id: Date.now().toString(),
-            date: new Date().toISOString(),
-            condition: selectedCondition.name,
-            description: selectedCondition.description,
-            severity: selectedCondition.severity,
-            recommendations: selectedCondition.recommendations,
-            imageUrl: imageUrl,
-          }
+      // Map the API response to the report data structure
+      const reportData = {
+        id: Date.now().toString(),
+        date: new Date().toISOString(),
+        condition: analysisResult.condition || 'Unknown Condition',
+        description: analysisResult.description || 'No description provided.',
+        severity: analysisResult.severity || 'Unknown Severity',
+        recommendations: analysisResult.recommendations || [],
+        imageUrl: imageUrl, // Use the captured image URL
+      };
 
-          // Add to history
-          addReport(reportData)
+      // Add to history
+      addReport(reportData);
 
-          // Navigate to report page
-          router.push(`/report/${reportData.id}`)
-        } catch (err) {
-          console.error("Error generating report:", err)
-          setIsAnalyzing(false)
-          toast({
-            title: "Analysis Error",
-            description: "Could not generate report. Please try again.",
-            variant: "destructive",
-          })
-        }
-      }, 2000)
+      // Navigate to report page
+      router.push(`/report/${reportData.id}`);
+
     } catch (err) {
-      console.error("Error processing image:", err)
-      setIsAnalyzing(false)
+      console.error("Error during analysis API call (scan page):", err);
+      setIsAnalyzing(false);
       toast({
         title: "Analysis Error",
-        description: "Could not process image. Please try again.",
+        description: `Could not analyze image: ${err instanceof Error ? err.message : String(err)}`,
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   // Retry camera initialization after error
   const retryCamera = () => {
