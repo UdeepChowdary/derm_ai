@@ -7,9 +7,18 @@ import { ArrowLeft, Calendar, Info, Shield } from "lucide-react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useHistory } from "@/components/history-provider"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { InteractiveLogo } from "@/components/interactive-logo"
 import { toast } from "@/components/ui/use-toast"
+import html2canvas from "html2canvas"
+import jsPDF from "jspdf"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Share2 } from "lucide-react"
 
 type ReportParams = {
   params: {
@@ -21,6 +30,7 @@ export default function ReportPage({ params }: ReportParams) {
   const router = useRouter()
   const { reports } = useHistory()
   const [report, setReport] = useState<any>(null)
+  const reportRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const foundReport = reports.find((r) => r.id === params.id)
@@ -52,6 +62,51 @@ export default function ReportPage({ params }: ReportParams) {
     })
   }
 
+  const shareReport = async (format: 'image' | 'pdf') => {
+    if (!reportRef.current) return
+
+    try {
+      const canvas = await html2canvas(reportRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      })
+
+      if (format === 'image') {
+        // Share as image
+        const imageData = canvas.toDataURL('image/png')
+        const link = document.createElement('a')
+        link.href = imageData
+        link.download = `derm-report-${report.id}.png`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+      } else {
+        // Share as PDF
+        const imgData = canvas.toDataURL('image/png')
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'px',
+          format: [canvas.width, canvas.height]
+        })
+        pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height)
+        pdf.save(`derm-report-${report.id}.pdf`)
+      }
+
+      toast({
+        title: "Success",
+        description: `Report shared as ${format.toUpperCase()}`,
+      })
+    } catch (error) {
+      console.error('Error sharing report:', error)
+      toast({
+        title: "Error",
+        description: "Failed to share report. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-900">
       <header className="p-4 flex items-center border-b border-slate-200 dark:border-slate-800">
@@ -62,7 +117,7 @@ export default function ReportPage({ params }: ReportParams) {
       </header>
 
       <main className="flex-1 container max-w-md mx-auto p-4 pb-20">
-        <div className="space-y-6">
+        <div className="space-y-6" ref={reportRef}>
           {/* Image */}
           <Card className="overflow-hidden border-teal-100 dark:border-teal-900">
             <div className="relative w-full aspect-square">
@@ -138,18 +193,22 @@ export default function ReportPage({ params }: ReportParams) {
           </Card>
 
           {/* Share Button */}
-          <Button
-            className="w-full bg-teal-500 hover:bg-teal-600 dark:bg-teal-600 dark:hover:bg-teal-700"
-            onClick={() => {
-              toast({
-                title: "Share Feature",
-                description: "In a real app, this would share the report with your healthcare provider.",
-              })
-            }}
-          >
-            <Shield className="mr-2 h-5 w-5" />
-            Share with Healthcare Provider
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="w-full bg-teal-500 hover:bg-teal-600 dark:bg-teal-600 dark:hover:bg-teal-700">
+                <Share2 className="mr-2 h-5 w-5" />
+                Share with Healthcare Provider
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => shareReport('image')}>
+                Share as Image
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => shareReport('pdf')}>
+                Share as PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </main>
 
