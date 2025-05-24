@@ -253,6 +253,3 @@ export default function UploadPage() {
     </div>
   )
 }
-
-// Integrated clinical data mapping
-recommendations: clinicalData.mappings
