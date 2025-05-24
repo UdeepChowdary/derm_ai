@@ -1,101 +1,74 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { BottomNavigation } from "@/components/bottom-navigation"
-import { Calendar, Search } from "lucide-react"
-import Image from "next/image"
-import Link from "next/link"
-import { useHistory } from "@/components/history-provider"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Search } from "lucide-react"
+import Link from "next/link"
+import { PageTransition } from "@/components/page-transition"
+import { useHistory } from "@/components/history-provider"
 import { useState } from "react"
 
 export default function HistoryPage() {
   const { reports } = useHistory()
-  const [searchQuery, setSearchQuery] = useState("")
-
-  const filteredReports = reports.filter(
-    (report) =>
-      report.condition.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      report.description.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    })
-  }
+  const [search, setSearch] = useState("")
+  const filteredReports = reports.filter((report) => {
+    const q = search.toLowerCase()
+    return (
+      report.condition.toLowerCase().includes(q) ||
+      report.description.toLowerCase().includes(q) ||
+      report.date.toLowerCase().includes(q)
+    )
+  })
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-900">
-      <header className="p-4 border-b border-slate-200 dark:border-slate-800">
-        <h1 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">History</h1>
-        <p className="text-slate-500 dark:text-slate-400">View your past skin analyses</p>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col">
+      <header className="p-8 pb-4 border-b border-slate-200 dark:border-slate-800">
+        <h1 className="text-3xl font-bold text-slate-800 dark:text-white mb-1">History</h1>
+        <p className="text-lg text-slate-500 dark:text-slate-400">View your past skin analyses</p>
       </header>
-
-      <main className="flex-1 container max-w-md mx-auto p-4 pb-20">
-        <div className="relative mb-6">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
-          <Input
-            placeholder="Search reports..."
-            className="pl-10"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-
-        {filteredReports.length === 0 ? (
-          <div className="text-center py-12">
-            {reports.length === 0 ? (
-              <>
-                <p className="text-slate-500 dark:text-slate-400 mb-4">You haven't created any reports yet</p>
+      <main className="flex-1 flex flex-col items-center justify-start pt-8">
+        <PageTransition>
+          <div className="w-full max-w-md flex flex-col items-center">
+            {/* Search Bar */}
+            <div className="relative w-full mb-10">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                <Search className="w-5 h-5" />
+              </span>
+              <Input
+                className="pl-12 py-3 rounded-lg border border-[color:hsl(var(--border))] bg-white dark:bg-slate-900 shadow-none focus:border-[color:hsl(var(--border))]"
+                placeholder="Search reports..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+            </div>
+            {/* Reports List or Empty State */}
+            {filteredReports.length === 0 ? (
+              <div className="text-center">
+                <p className="text-slate-500 dark:text-slate-400 mb-6">You haven't created any reports yet{search ? " or no reports match your search." : "."}</p>
                 <Link href="/home">
-                  <Button className="bg-teal-500 hover:bg-teal-600 dark:bg-teal-600 dark:hover:bg-teal-700">
-                    Create Your First Report
-                  </Button>
+                  <Button className="px-8 py-3 text-base font-semibold bg-teal-500 hover:bg-teal-600">Create Your First Report</Button>
                 </Link>
-              </>
+              </div>
             ) : (
-              <p className="text-slate-500 dark:text-slate-400">No reports match your search</p>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {filteredReports.map((report) => (
-              <Link key={report.id} href={`/report/${report.id}`}>
-                <Card className="overflow-hidden hover:shadow-md transition-shadow">
-                  <CardContent className="p-0">
-                    <div className="flex">
-                      <div className="relative w-24 h-24">
-                        <Image
-                          src={report.imageUrl || "/placeholder.svg"}
-                          alt={report.condition}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                      <div className="p-3 flex-1">
-                        <div className="flex items-center text-xs text-slate-500 dark:text-slate-400 mb-1">
-                          <Calendar className="h-3 w-3 mr-1" />
-                          <span>{formatDate(report.date)}</span>
-                        </div>
-                        <h3 className="font-medium text-slate-800 dark:text-white line-clamp-1">{report.condition}</h3>
-                        <p className="text-sm text-slate-600 dark:text-slate-300 line-clamp-2 mt-1">
-                          {report.description}
-                        </p>
+              <div className="w-full space-y-4">
+                {filteredReports.map((report) => (
+                  <Link key={report.id} href={`/report/${report.id}`} className="block">
+                    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 flex gap-4 items-center hover:shadow-md transition">
+                      <img src={report.imageUrl} alt="Skin" className="w-16 h-16 rounded-lg object-cover border border-slate-200 dark:border-slate-800" />
+                      <div className="flex-1">
+                        <div className="font-semibold text-slate-800 dark:text-white">{report.condition}</div>
+                        <div className="text-slate-500 dark:text-slate-400 text-sm line-clamp-2">{report.description}</div>
+                        <div className="text-xs text-slate-400 mt-1">{new Date(report.date).toLocaleString()}</div>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
-        )}
+        </PageTransition>
       </main>
-
       <BottomNavigation currentPath="/history" />
     </div>
   )

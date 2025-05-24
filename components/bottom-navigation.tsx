@@ -1,73 +1,72 @@
 "use client"
 
-import { Home, History, Settings, Sliders } from "lucide-react"
+import * as React from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { Home, Clock, Sun, Settings } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { motion } from "framer-motion"
+
+const navItems = [
+  {
+    name: "Home",
+    href: "/home",
+    icon: Home,
+  },
+  {
+    name: "History",
+    href: "/history",
+    icon: Clock,
+  },
+  {
+    name: "UV Index",
+    href: "/uv",
+    icon: Sun,
+  },
+  {
+    name: "Settings",
+    href: "/settings",
+    icon: Settings,
+  },
+]
 
 interface BottomNavigationProps {
-  currentPath: string
+  currentPath?: string
 }
 
 export function BottomNavigation({ currentPath }: BottomNavigationProps) {
-  const navItems = [
-    {
-      name: "Home",
-      href: "/home",
-      icon: Home,
-      ariaLabel: "Go to home page"
-    },
-    {
-      name: "History",
-      href: "/history",
-      icon: History,
-      ariaLabel: "View scan history"
-    },
-    {
-      name: "Settings",
-      href: "/settings",
-      icon: Settings,
-      ariaLabel: "App settings"
-    },
-    {
-      name: "Access",
-      href: "/accessibility",
-      icon: Sliders,
-      ariaLabel: "Accessibility features"
-    },
-  ]
+  const pathname = usePathname()
+  const activePath = currentPath || pathname
 
   return (
-    <div 
-      className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 z-10"
-      role="navigation"
-      aria-label="Main navigation"
-    >
-      <div className="container max-w-md mx-auto">
-        <nav className="flex items-center justify-around">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 dark:border-transparent bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container">
+        <div className="flex h-16 items-center justify-around">
           {navItems.map((item) => {
-            const isActive =
-              currentPath === item.href || (currentPath.startsWith("/report") && item.href === "/history")
-
+            const isActive = activePath === item.href
             return (
               <Link
-                key={item.name}
+                key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex flex-col items-center py-3 px-5",
+                  "flex flex-col items-center gap-1 px-3 py-2 text-sm font-medium transition-colors",
                   isActive
-                    ? "text-teal-500 dark:text-teal-400"
-                    : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100",
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
-                aria-label={item.ariaLabel}
-                aria-current={isActive ? "page" : undefined}
               >
-                <item.icon className="h-6 w-6" aria-hidden="true" />
-                <span className="text-xs mt-1">{item.name}</span>
+                <motion.div
+                  animate={isActive ? { scale: 1.2 } : { scale: 1 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                >
+                  <item.icon className={cn("h-5 w-5", isActive && "[color:#14B8A6]")} />
+                </motion.div>
+                <span className={cn(isActive && "[color:#14B8A6]")}>{item.name}</span>
               </Link>
             )
           })}
-        </nav>
+        </div>
       </div>
-    </div>
+    </nav>
   )
 }

@@ -4,73 +4,73 @@
 
 @layer base {
   :root {
-    --background: 210 40% 98%;
+    --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
-
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
-
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 173 80% 40%;
+    --primary: 199 100% 56%;
     --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
+    --secondary: 210 40% 98%;
     --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
+    --muted: 210 40% 97.5%;
     --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 173 80% 95%;
-    --accent-foreground: 173 80% 40%;
-
+    --accent: 210 40% 97.5%;
+    --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
+    --border: 172 76% 39%; /* #14B8A6 bright teal */
+    --input: 172 76% 39%;
+    --ring: 199 100% 56%;
+    --radius: 0.5rem;
 
-    --border: 173 80% 40%;
-    --input: 173 80% 90%;
-    --ring: 173 80% 40%;
-
-    --radius: 0.75rem;
-    
-    /* Focus styles */
-    --focus-ring: 173 80% 40%;
-    --focus-ring-width: 2px;
+    /* Theme Customizer Variables */
+    --theme-contrast: 1;
+    --theme-saturation: 1.1;
+    --theme-primary: #0ea5e9;
   }
 
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
-
     --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
-
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-
-    --primary: 173 80% 40%;
+    --primary: 199 89% 48%;
     --primary-foreground: 222.2 47.4% 11.2%;
-
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
-
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
-
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
-
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 173 80% 40%;
-    
-    /* Focus styles */
-    --focus-ring: 173 80% 60%;
-    --focus-ring-width: 2px;
+    --ring: 199 89% 48%;
+  }
+
+  html {
+    font-size: 18px;
+  }
+
+  h1 {
+    font-size: 2.5rem;
+  }
+
+  h2 {
+    font-size: 2rem;
+  }
+
+  h3 {
+    font-size: 1.5rem;
+  }
+
+  p, li, button, input, label, span, div {
+    font-size: 1.125rem;
   }
 }
 
@@ -80,7 +80,57 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
+}
+
+/* Card and input shadow for light mode */
+@layer components {
+  .card, .input, .bg-white {
+    @apply shadow-md;
+  }
+  .card {
+    @apply border border-[color:hsl(var(--border))] bg-white rounded-xl;
+  }
+}
+
+/* Theme Customizer Styles */
+:root {
+  --transition-duration: 0.3s;
+}
+
+/* Apply theme customizations */
+[data-theme] {
+  transition: background-color var(--transition-duration) ease,
+              color var(--transition-duration) ease,
+              border-color var(--transition-duration) ease;
+}
+
+/* Apply contrast and saturation */
+[data-theme] * {
+  filter: contrast(var(--theme-contrast)) saturate(var(--theme-saturation));
+  transition: filter var(--transition-duration) ease;
+}
+
+/* Apply primary color */
+[data-theme] .bg-primary {
+  background-color: var(--theme-primary) !important;
+}
+
+[data-theme] .text-primary {
+  color: var(--theme-primary) !important;
+}
+
+[data-theme] .border-primary {
+  border-color: var(--theme-primary) !important;
+}
+
+/* Smooth transitions for all theme changes */
+* {
+  transition: background-color var(--transition-duration) ease,
+              color var(--transition-duration) ease,
+              border-color var(--transition-duration) ease,
+              box-shadow var(--transition-duration) ease;
 }
 
 /* Accessibility styles */

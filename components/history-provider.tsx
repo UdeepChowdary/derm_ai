@@ -41,8 +41,9 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("dermascan-reports", JSON.stringify(reports))
   }, [reports])
 
+  const MAX_REPORTS = 10;
   const addReport = (report: Report) => {
-    setReports((prevReports) => [report, ...prevReports])
+    setReports((prevReports) => [report, ...prevReports].slice(0, MAX_REPORTS))
   }
 
   const clearHistory = () => {

@@ -19,21 +19,24 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Share2 } from "lucide-react"
+import React from "react"
 
 type ReportParams = {
-  params: {
-    id: string
-  }
+  params: Promise<{ id: string }>
 }
 
 export default function ReportPage({ params }: ReportParams) {
+  // Unwrap params promise for Next.js App Router
+  const unwrappedParams = React.use(params) as { id: string }
+  const id = unwrappedParams?.id
   const router = useRouter()
   const { reports } = useHistory()
   const [report, setReport] = useState<any>(null)
   const reportRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const foundReport = reports.find((r) => r.id === params.id)
+    if (!id) return;
+    const foundReport = reports.find((r) => r.id === id)
     if (foundReport) {
       console.log("Found report:", foundReport)
       setReport(foundReport)
@@ -41,7 +44,7 @@ export default function ReportPage({ params }: ReportParams) {
       console.error("Report not found, redirecting to home")
       router.push("/home")
     }
-  }, [params.id, reports, router])
+  }, [id, reports, router])
 
   if (!report) {
     return (
@@ -109,7 +112,7 @@ export default function ReportPage({ params }: ReportParams) {
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-900">
-      <header className="p-4 flex items-center border-b border-slate-200 dark:border-slate-800">
+      <header className="p-4 flex items-center border-b border-[color:hsl(var(--border))] dark:border-slate-800">
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -119,7 +122,7 @@ export default function ReportPage({ params }: ReportParams) {
       <main className="flex-1 container max-w-md mx-auto p-4 pb-20">
         <div className="space-y-6" ref={reportRef}>
           {/* Image */}
-          <Card className="overflow-hidden border-teal-100 dark:border-teal-900">
+          <Card className="overflow-hidden border-[color:hsl(var(--border))] dark:border-teal-900">
             <div className="relative w-full aspect-square">
               <Image
                 src={report.imageUrl || "/placeholder.svg"}
@@ -177,7 +180,7 @@ export default function ReportPage({ params }: ReportParams) {
           </Card>
 
           {/* Disclaimer with interactive logo watermark */}
-          <Card className="bg-amber-50 dark:bg-amber-950/30 border-amber-100 dark:border-amber-900/50 relative overflow-hidden">
+          <Card className="bg-amber-50 dark:bg-amber-950/30 border-[color:hsl(var(--border))] dark:border-amber-900/50 relative overflow-hidden">
             <div className="absolute right-4 bottom-4 opacity-5 flex items-center justify-center">
               <InteractiveLogo size="lg" />
             </div>

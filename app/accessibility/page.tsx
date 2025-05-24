@@ -12,7 +12,7 @@ export default function AccessibilityPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-900">
-      <header className="p-4 flex items-center border-b border-slate-200 dark:border-slate-800">
+      <header className="p-4 flex items-center border-b border-slate-200 dark:border-transparent">
         <Button variant="ghost" size="icon" onClick={() => router.back()} aria-label="Go back to previous page">
           <ArrowLeft className="h-5 w-5" />
         </Button>

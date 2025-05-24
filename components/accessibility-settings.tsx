@@ -20,7 +20,7 @@ export function AccessibilitySettings() {
         <Button
           variant="outline"
           size="icon"
-          className="rounded-full fixed bottom-20 right-4 z-50 border-2 border-primary bg-background"
+          className="rounded-full fixed bottom-20 right-4 z-50 border-2 !border-[#14B8A6] bg-background"
           aria-label="Accessibility Settings"
         >
           <AccessibilityIcon className="h-4 w-4" />
@@ -260,10 +260,10 @@ export function AccessibilitySettings() {
         </div>
 
         <CardFooter className="flex justify-between pt-4 border-t">
-          <Button variant="outline" onClick={resetSettings}>
+          <Button variant="outline" className="!border-[#14B8A6] !text-[#14B8A6]" onClick={resetSettings}>
             Reset Default
           </Button>
-          <Button onClick={() => setOpen(false)}>Close</Button>
+          <Button className="!bg-[#14B8A6] !text-white" onClick={() => setOpen(false)}>Close</Button>
         </CardFooter>
       </DialogContent>
     </Dialog>
