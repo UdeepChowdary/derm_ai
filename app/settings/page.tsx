@@ -59,7 +59,7 @@ export default function SettingsPage() {
                       >
                         {theme === "dark" ? "🌜" : "🌞"}
                       </motion.span>
-                      <span className="font-medium">Dark Mode</span>
+                      <span className="font-medium">{theme === "dark" ? "Dark Mode" : "Light Mode"}</span>
                     </div>
                     <span className="text-sm text-slate-500">Switch between light and dark themes</span>
                   </div>

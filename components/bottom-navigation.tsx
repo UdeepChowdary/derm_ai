@@ -40,9 +40,9 @@ export function BottomNavigation({ currentPath }: BottomNavigationProps) {
   const activePath = currentPath || pathname
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 dark:border-transparent bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container">
-        <div className="flex h-16 items-center justify-around">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 dark:border-slate-800 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="max-w-md mx-auto">
+        <div className="flex h-14 items-center justify-around">
           {navItems.map((item) => {
             const isActive = activePath === item.href
             return (
@@ -50,19 +50,20 @@ export function BottomNavigation({ currentPath }: BottomNavigationProps) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex flex-col items-center gap-1 px-3 py-2 text-sm font-medium transition-colors",
+                  "flex flex-col items-center justify-center min-w-[60px] max-w-[80px] h-full transition-colors",
                   isActive
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 <motion.div
-                  animate={isActive ? { scale: 1.2 } : { scale: 1 }}
+                  animate={isActive ? { scale: 1.15 } : { scale: 1 }}
                   transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  className="mb-0.5"
                 >
-                  <item.icon className={cn("h-5 w-5", isActive && "[color:#14B8A6]")} />
+                  <item.icon className={cn("h-4 w-4", isActive && "[color:#14B8A6]")} />
                 </motion.div>
-                <span className={cn(isActive && "[color:#14B8A6]")}>{item.name}</span>
+                <span className={cn("text-[10px] font-medium truncate", isActive && "[color:#14B8A6]")}>{item.name}</span>
               </Link>
             )
           })}

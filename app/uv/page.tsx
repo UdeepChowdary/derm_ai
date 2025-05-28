@@ -13,12 +13,8 @@ export default function UVPage() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 w-full border-b border-slate-200 dark:border-slate-800 bg-background">
         <div className="container flex h-14 items-center">
-          <motion.div
-            initial={{ rotate: 0 }}
-            animate={{ rotate: theme === "dark" ? 180 : 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            {theme === "dark" ? <Moon className="h-5 w-5 mr-2" /> : <Sun className="h-5 w-5 mr-2" />}
+          <motion.div>
+            <Sun className="h-5 w-5 mr-2" />
           </motion.div>
           <h1 className="text-lg font-semibold">UV Index Tracker</h1>
         </div>

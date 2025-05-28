@@ -57,7 +57,7 @@ export function ThemeCustomizer() {
               ) : (
                 <Sun className="h-5 w-5" />
               )}
-              <span>Dark Mode</span>
+              <span>{theme === "dark" ? "Dark Mode" : "Light Mode"}</span>
             </div>
             <Switch
               checked={theme === "dark"}

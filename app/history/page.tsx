@@ -52,18 +52,30 @@ export default function HistoryPage() {
               </div>
             ) : (
               <div className="w-full space-y-4">
-                {filteredReports.map((report) => (
-                  <Link key={report.id} href={`/report/${report.id}`} className="block">
-                    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 flex gap-4 items-center hover:shadow-md transition">
-                      <img src={report.imageUrl} alt="Skin" className="w-16 h-16 rounded-lg object-cover border border-slate-200 dark:border-slate-800" />
-                      <div className="flex-1">
-                        <div className="font-semibold text-slate-800 dark:text-white">{report.condition}</div>
-                        <div className="text-slate-500 dark:text-slate-400 text-sm line-clamp-2">{report.description}</div>
-                        <div className="text-xs text-slate-400 mt-1">{new Date(report.date).toLocaleString()}</div>
+                {filteredReports.map((report, index) => {
+                  // Create a compound key using both ID and index to ensure uniqueness
+                  const uniqueKey = `${report.id}-${index}`;
+                  return (
+                    <Link key={uniqueKey} href={`/report/${report.id}`} className="block">
+                      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 flex gap-4 items-center hover:shadow-md transition">
+                        <img 
+                          src={report.imageUrl || "/images/placeholder.jpg"} 
+                          alt="Skin" 
+                          className="w-16 h-16 rounded-lg object-cover border border-slate-200 dark:border-slate-800" 
+                          onError={(e) => {
+                            // Fallback image if the stored image fails to load
+                            e.currentTarget.src = "/images/placeholder.jpg";
+                          }}
+                        />
+                        <div className="flex-1">
+                          <div className="font-semibold text-slate-800 dark:text-white">{report.condition}</div>
+                          <div className="text-slate-500 dark:text-slate-400 text-sm line-clamp-2">{report.description}</div>
+                          <div className="text-xs text-slate-400 mt-1">{new Date(report.date).toLocaleString()}</div>
+                        </div>
                       </div>
-                    </div>
-                  </Link>
-                ))}
+                    </Link>
+                  );
+                })}
               </div>
             )}
           </div>
