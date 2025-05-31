@@ -28,7 +28,7 @@ function generateUUID(): string {
 }
 
 // API Configuration
-const API_KEY = '47ee8546-a6e2-35d5-552a-5a160774b9a5'
+const API_KEY = 'e87b320c-1a1d-e543-f372-864f32e962df'
 const API_URL = 'https://autoderm.ai/v1/query'
 const MODEL = 'autoderm_v2_2' // Using the latest model as per documentation
 const LANGUAGE = 'en' // Default language as per documentation
