@@ -2,12 +2,13 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Camera, Upload } from "lucide-react"
+import { Camera, Upload, AlertCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useRef } from "react"
 import { BottomNavigation } from "@/components/bottom-navigation"
 import { InteractiveLogo } from "@/components/interactive-logo"
 import { PageTransition } from "@/components/page-transition"
+import { AutoDermResponse } from "@/lib/analyze-skin"
 
 export default function HomePage() {
   const router = useRouter()
@@ -16,6 +17,7 @@ export default function HomePage() {
   const [capturedImage, setCapturedImage] = useState<string | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysis, setAnalysis] = useState<any>(null)
+  const [error, setError] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -48,54 +50,66 @@ export default function HomePage() {
     }
   }
 
-  const analyzeImage = () => {
+  const analyzeImage = async () => {
     if (!capturedImage) return
     setIsAnalyzing(true)
-    setTimeout(() => {
-      const conditions = [
-        {
-          name: "Contact Dermatitis",
-          description: "Inflammation caused by contact with a substance that irritates the skin or causes an allergic reaction.",
-          severity: "Mild to Moderate",
-          recommendations: [
-            "Avoid the irritant or allergen",
-            "Apply cool, wet compresses",
-            "Use over-the-counter anti-itch creams",
-            "Take oral antihistamines for itching",
-          ],
+    setError(null)
+    
+    try {
+      // Convert base64 image to blob
+      const response = await fetch(capturedImage)
+      const blob = await response.blob()
+      
+      // Create form data
+      const formData = new FormData()
+      formData.append('file', blob, 'skin-image.jpg')
+      
+      // Make API call to Auto Derm
+      const apiResponse = await fetch('https://autoderm.ai/v1/query', {
+        method: 'POST',
+        headers: {
+          'Api-Key': process.env.NEXT_PUBLIC_AUTODERM_API_KEY || 'b1594e50-1ca6-a114-626f-22df50901c16'
         },
-        {
-          name: "Atopic Dermatitis (Eczema)",
-          description: "A chronic skin condition characterized by itchy, inflamed skin with red, scaly patches.",
-          severity: "Moderate",
-          recommendations: [
-            "Moisturize skin at least twice daily",
-            "Avoid harsh soaps and irritants",
-            "Apply prescribed topical corticosteroids",
-            "Consider antihistamines for itching",
-            "Keep fingernails short to prevent damage from scratching",
-          ],
-        },
-        {
-          name: "Psoriasis",
-          description: "An autoimmune condition causing rapid skin cell growth, resulting in thick, red patches with silvery scales.",
-          severity: "Moderate to Severe",
-          recommendations: [
-            "Use medicated creams or ointments",
-            "Consider phototherapy treatment",
-            "Keep skin moisturized",
-            "Avoid triggers like stress and alcohol",
-            "Consult a dermatologist for prescription treatments",
-          ],
-        },
-      ]
-      const selectedCondition = conditions[Math.floor(Math.random() * conditions.length)]
-      setAnalysis({
-        ...selectedCondition,
-        imageUrl: capturedImage,
+        body: formData
       })
+
+      if (!apiResponse.ok) {
+        throw new Error(`API request failed with status ${apiResponse.status}`)
+      }
+
+      const data = await apiResponse.json() as AutoDermResponse
+      
+      if (!data.success) {
+        throw new Error(data.message || 'API request failed')
+      }
+      
+      // Get the top prediction
+      const topPrediction = data.predictions[0]
+      
+      // Map the API response to our analysis format
+      setAnalysis({
+        name: topPrediction.name,
+        description: `Detected with ${(topPrediction.confidence * 100).toFixed(1)}% confidence`,
+        severity: topPrediction.confidence >= 0.75 ? 'Severe' : 
+                 topPrediction.confidence >= 0.5 ? 'Moderate' : 'Mild',
+        recommendations: [
+          "Consult a dermatologist for professional evaluation",
+          "Keep the affected area clean and dry",
+          "Avoid scratching or irritating the area",
+          "Monitor for any changes in the condition"
+        ],
+        imageUrl: capturedImage,
+        confidence: topPrediction.confidence,
+        icdCode: topPrediction.icd,
+        readMoreUrl: topPrediction.readMoreUrl
+      })
+    } catch (error) {
+      console.error('Error analyzing skin image:', error)
+      // Show error to user
+      setError(error instanceof Error ? error.message : 'Failed to analyze image. Please try again.')
+    } finally {
       setIsAnalyzing(false)
-    }, 2000)
+    }
   }
 
   const handleUpload = () => {
@@ -132,6 +146,21 @@ export default function HomePage() {
           </div>
 
           <div className="grid gap-6">
+            {error && (
+              <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <AlertCircle className="h-5 w-5 text-red-400" />
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-red-800 dark:text-red-200">Error</h3>
+                    <div className="mt-2 text-sm text-red-700 dark:text-red-300">
+                      <p>{error}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             <Card className="overflow-hidden border-[color:hsl(var(--border))] dark:border-teal-900">
               <CardContent className="p-0">
                 <Button

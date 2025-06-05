@@ -1,6 +1,8 @@
 // Toast notifications removed per user request
 // import { toast } from "@/hooks/use-toast"
 
+import { API_KEYS } from "@/config/api-keys"
+
 export type SkinAnalysisResult = {
   id: string
   condition: string
@@ -19,6 +21,26 @@ export type SkinAnalysisResult = {
   additionalNotes?: string
 }
 
+export type AutoDermPrediction = {
+  name: string
+  confidence: number
+  icd: string
+  readMoreUrl: string
+  classificationId: string
+}
+
+export type AutoDermResponse = {
+  success: boolean
+  message: string
+  id: string
+  predictions: AutoDermPrediction[]
+  fitzpatrick: number
+  anonymous?: {
+    confidence: number
+    prediction: boolean
+  }
+}
+
 function generateUUID(): string {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
     const r = Math.random() * 16 | 0
@@ -28,7 +50,7 @@ function generateUUID(): string {
 }
 
 // API Configuration
-const API_KEY = 'e87b320c-1a1d-e543-f372-864f32e962df'
+const API_KEY = API_KEYS.AUTODERM_API_KEY
 const API_URL = 'https://autoderm.ai/v1/query'
 const MODEL = 'autoderm_v2_2' // Using the latest model as per documentation
 const LANGUAGE = 'en' // Default language as per documentation
@@ -218,19 +240,13 @@ function getRiskScoreFromConfidence(confidence: number): number {
 }
 
 export async function analyzeSkinImage(imageData: string): Promise<SkinAnalysisResult> {
-  // Always have a fallback to return if anything fails
+  // Helper function to get mock data as fallback
   const getMockData = () => {
-    const randomIndex = Math.floor(Math.random() * mockAnalysisResults.length)
-    return mockAnalysisResults[randomIndex]
-  }
-  
+    const randomIndex = Math.floor(Math.random() * mockAnalysisResults.length);
+    return mockAnalysisResults[randomIndex];
+  };
+
   try {
-    // For demo purposes or when API limit is reached, check if we should use mock data
-    if (!API_KEY) {
-      console.log('No API key found, using mock data')
-      return getMockData()
-    }
-    
     // Convert base64 to blob
     const parts = imageData.split(';');
     const mimeType = parts[0].split(':')[1];
@@ -243,81 +259,68 @@ export async function analyzeSkinImage(imageData: string): Promise<SkinAnalysisR
     const byteArray = new Uint8Array(byteNumbers);
     const blob = new Blob([byteArray], { type: mimeType });
 
-    // Create form data according to API documentation
-    const formData = new FormData()
-    formData.append('file', blob, 'image.jpg')
-    
+    // Create form data
+    const formData = new FormData();
+    formData.append('file', blob, 'image.jpg');
+
     // Add query parameters
-    const params = new URLSearchParams()
-    params.append('model', MODEL)
-    params.append('language', LANGUAGE)
-    params.append('simple_names', 'true') // Get simplified disease names
-    params.append('anon_filter', 'false')  // Don't filter non-anonymous images
-    
-    const url = `${API_URL}?${params.toString()}`
-    
-    // Make the API request with proper headers
-    const response = await fetch(url, {
+    const params = new URLSearchParams();
+    params.append('model', MODEL);
+    params.append('language', LANGUAGE);
+    params.append('simple_names', 'true');
+    params.append('anon_filter', 'false');
+
+    // Make API request
+    const response = await fetch(`${API_URL}?${params.toString()}`, {
       method: 'POST',
       headers: {
         'Api-Key': API_KEY,
       },
-      body: formData
-    })
+      body: formData,
+    });
 
-    // Handle any API errors
     if (!response.ok) {
-      const errorText = await response.text()
-      console.log(`API error detected: ${response.status} - ${errorText}`)
-      
-      // Always fall back to mock data for any API error
-      console.log('Falling back to mock data due to API error')
-      return getMockData()
+      const errorText = await response.text();
+      console.error('API Error Response:', errorText);
+      throw new Error(`API request failed with status ${response.status}: ${errorText}`);
     }
 
-    const result = await response.json()
-    console.log('Autoderm API response:', result)
-    
-    // Check if we got valid predictions
-    if (!result.success || !result.predictions || result.predictions.length === 0) {
-      console.log('No predictions received from API, using mock data')
-      return getMockData()
+    const data = await response.json();
+    console.log('API Response:', data);
+
+    if (!data.success) {
+      throw new Error(data.message || 'Analysis failed');
     }
 
     // Get the top prediction
-    const topPrediction = result.predictions[0]
-    
-    // Map the API response to our enhanced SkinAnalysisResult type
-    const severity = mapConfidenceToSeverity(topPrediction.confidence);
-    const riskScore = getRiskScoreFromConfidence(topPrediction.confidence);
-    const analysisResult: SkinAnalysisResult = {
-      id: result.id || generateUUID(),
+    const topPrediction = data.predictions[0];
+
+    // Map the API response to our SkinAnalysisResult format
+    const result: SkinAnalysisResult = {
+      id: data.id,
       condition: topPrediction.name,
-      description: `This condition is classified as ${topPrediction.icd} in the International Classification of Diseases.`,
-      severity: severity,
-      riskScore: riskScore,
+      description: `Detected with ${(topPrediction.confidence * 100).toFixed(1)}% confidence`,
+      severity: mapConfidenceToSeverity(topPrediction.confidence),
+      riskScore: getRiskScoreFromConfidence(topPrediction.confidence),
       confidence: topPrediction.confidence,
-      recommendations: generateDefaultRecommendations(topPrediction.name, severity),
+      recommendations: generateDefaultRecommendations(
+        topPrediction.name,
+        mapConfidenceToSeverity(topPrediction.confidence)
+      ),
       conditionDetails: {
-        symptoms: [], // Will be populated from our mock data or can be expanded
-        causes: [],   // Can be expanded with more details
+        symptoms: [],
+        causes: [],
         whenToSeeDoctor: getWhenToSeeDoctor(topPrediction.confidence),
-        treatmentOptions: [] // Can be expanded with treatment options
+        treatmentOptions: [],
       },
       preventionTips: generatePreventionTips(topPrediction.name),
-      additionalNotes: `For more information, visit: ${topPrediction.readMoreUrl || 'consult a healthcare professional'}`
-    }
-    
-    // If we don't have recommendations from the API, generate some based on severity
-    if (analysisResult.recommendations.length === 0) {
-      analysisResult.recommendations = generateDefaultRecommendations(analysisResult.condition, analysisResult.severity);
-    }
-    
-    return analysisResult;
+      additionalNotes: `ICD Code: ${topPrediction.icd}. For more information, visit: ${topPrediction.readMoreUrl}`,
+    };
+
+    return result;
   } catch (error) {
-    // Log the error but don't let it propagate
-    console.error('Error analyzing skin image:', error)
-    console.log('Falling back to mock data due to error')
-    return getMockData()
+    console.error('Error analyzing skin image:', error);
+    // Fallback to mock data only if API call fails
+    return getMockData();
   }
 }
