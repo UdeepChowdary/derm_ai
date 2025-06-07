@@ -5,6 +5,6 @@ export const API_KEYS = {
   // OpenWeatherMap API key
   OPENWEATHER_API_KEY: "14978b8efe58626fa28eea6c07905d3c",
   // Autoderm API key
-  AUTODERM_API_KEY: process.env.AUTODERM_API_KEY || "c24df526-615d-56ef-f8db-110f0f7481fd"
+  AUTODERM_API_KEY: process.env.AUTODERM_API_KEY || "8ab3a40f-c956-c332-521d-f8e13b46042d"
   // Using only free APIs that don't require registration
 }
