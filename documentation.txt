@@ -1,0 +1,482 @@
+openapi: 3.0.0
+servers:
+  # Added by API Auto Mocking Plugin
+  # Added by API Auto Mocking Plugin
+  - description: Autoderm's AI Server
+    url: https://autoderm.ai
+info:
+  description: |
+    Autoderm's API provides advanced AI-driven image analysis for detecting skin diseases. It's designed for easy integration into existing healthcare systems.
+
+    ## API Key Usage
+
+    To access the API, you need a valid API key. Here are the steps to obtain and use an API key:
+
+    ### Obtaining an API Key
+    - **Subscription**: You can start a 3-months free trial by subscribing to one of our offers, cancellable anytime, while enjoying an extensive list of services.
+    - **Contact Us**: You can also contact us if you have any question or enquiry, or if you require support.
+
+    ### Using the API Key
+    - **Header Authentication**: Include your API key in the request header under the name `Api-Key`. For example, `"Api-Key: Pk566ZkEQRLr9vNwo2Gkr1uL6pr-4VjZUkvdJHAdFsA"`.
+    - **Keep it Secure**: Treat your API key like a password. Avoid sharing it publicly, storing it in version-controlled files, or embedding it directly in your application's code.
+    - **Environment Variables**: Consider setting the API key as an environment variable in your application's runtime environment. For guidelines on managing environment variables, refer to the [12 Factor App methodology](https://12factor.net/config).
+
+    ### Additional Parameters
+    - **Language**: The `language` parameter allows you to specify the language of the response content. It accepts a two-letter ISO 639-1 code. Default is `"en"` for English.
+    - **Model**: The `model` parameter lets you choose the version of the AI model for predictions. Detailed information on available models can be found in the models section.
+
+  version: "1.0.0"
+  title: Autoderm API
+
+paths:
+  /v1/query:
+    post:
+      tags:
+        - Disease Model
+      summary: Detect the top 5 most likely diseases from a picture
+      operationId: detectDiseases
+      description: |
+        This endpoint accepts an image and returns the top 5 most likely diseases, including ICD codes, disease names, and additional information. If no model name is provided, the most recent one shall be selected as default. We recommend sending images with a high resolution, uncompressed, ideally over 300kb in size, well centered around the area of the condition for optimal results.
+      security:
+        - ApiKeyAuth: [Your API Key here]
+      parameters:
+        - in: query
+          name: model
+          description: The AI model to be used for prediction. Available values are autoderm_v2_2 (latest), autoderm_v2_1, autoderm_v2_0, autoderm_v1_1, autoderm_v1_0.
+          schema:
+            type: string
+        - in: query
+          name: language
+          description: Specifies the language for the response. Default is 'en'. Possible values are en, sv, es, zh.
+          schema:
+            type: string
+            default: 'en'
+        - in: query
+          name: simple_names
+          description: Specifies whether the returned disease names should be simplified.
+          schema:
+            type: boolean
+        - in: query
+          name: save_image
+          description: If you want to manually disable image saving - note that this may not help improve future models. Default value true
+          schema:
+            type: boolean
+        - in: query
+          name: anon_filter
+          description: If set to true, filters out identifiable/non-anonymous images (images with 2 or more eyes). When this filter is applied, the API will return an error if the image is not considered anonymous.
+          schema:
+            type: boolean
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Successfully detected diseases
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - message
+                  - id
+                  - predictions
+                  - fitzpatrick
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  id:
+                    type: string
+                  predictions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DiseasePrediction'
+                  fitzpatrick:
+                    type: integer of the Fitzpatrick scale 1-6
+                  anonymous:
+                    type: object
+                    properties:
+                      confidence:
+                        type: number
+                        format: float
+                      prediction:
+                        type: boolean
+        '400':
+          description: Bad request due to invalid parameters or request format
+      x-codeSamples:
+              - lang: 'Python'
+                source: |
+                  import requests
+
+                  url = 'https://autoderm.ai/v1/query'
+                  files = {'file': open('path_to_image.jpg', 'rb')}
+                  data = {'model': 'autoderm_v2_2', 'language': 'en', 'anon_filter': 'false'}
+                  headers = {'Api-Key': 'Your API Key here'}
+
+                  response = requests.post(url, headers=headers, files=files, data=data)
+                  print(response.json())
+              - lang: 'cURL'
+                source: |
+                  curl -X POST "https://autoderm.ai/v1/query?language=en&simple_names=True&model=autoderm_v2_1&anon_filter=false" \
+                  -H "Api-Key: Your API Key here" \
+                  -F "file=@skin.JPG"
+
+              - lang: 'JavaScript'
+                source: |
+                  const formData = new FormData();
+                  formData.append('file', document.getElementById('inputFile').files[0]); // Assumes an <input type="file" id="inputFile">
+                  formData.append('language', 'en');
+                  formData.append('simple_names', 'True');
+                  formData.append('model', 'autoderm_v2_1');
+                  formData.append('anon_filter', 'false');
+
+                  fetch('https://autoderm.ai/v1/query', {
+                    method: 'POST',
+                    headers: {
+                      'Api-Key': 'Your API Key here'
+                    },
+                    body: formData
+                  })
+                  .then(response => {
+                    if (!response.ok) {
+                      throw new Error(`status_error: ${response.status}`);
+                    }
+                    return response.json();
+                  })
+                  .then(data => {
+                    const predictions = data.predictions;
+                    console.log(predictions);
+                  })
+                  .catch(error => console.error('Error:', error));
+
+              - lang: 'Rust'
+                source: |
+                  use reqwest::blocking::multipart;
+                  use std::path::Path;
+
+                  fn main() -> Result<(), Box<dyn std::error::Error>> {
+                      let form = multipart::Form::new()
+                          .text("model", "autoderm_v2_2")
+                          .text("language", "en")
+                          .text("anon_filter", "false")
+                          .file("file", "path_to_image.jpg")?;
+
+                      let client = reqwest::blocking::Client::new();
+                      let res = client.post("https://autoderm.ai/v1/query")
+                          .header("Api-Key", "Your API Key here")
+                          .multipart(form)
+                          .send()?
+                          .text()?;
+
+                      println!("{}", res);
+                      Ok(())
+                  }
+  /v1/query_genitals:
+      post:
+        tags:
+          - Genital Model
+        summary: Check for presence of genitals in an image
+        operationId: checkForGenitals
+        description: |
+          This endpoint analyzes an image to determine if it contains images of genitals. It uses a specific model for this analysis.
+        security:
+          - ApiKeyAuth: []
+        parameters:
+          - in: query
+            name: model
+            description: The AI model to be used for checking the image. Currently, the only available model is 'genitals_v1_0'.
+            required: true
+            schema:
+              type: string
+              default: 'genitals_v1_0'
+          - in: query
+            name: save_image
+            description: If you want to manually disable image saving - note that this may not help improve future models. Default value true.
+            schema:
+               type: boolean
+        requestBody:
+          required: true
+          content:
+            multipart/form-data:
+              schema:
+                type: object
+                properties:
+                  file:
+                    type: string
+                    format: binary
+        responses:
+          '200':
+            description: Analysis result
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    result:
+                      type: boolean
+          '400':
+            description: Bad request due to invalid parameters or request format
+        x-codeSamples:
+          - lang: 'Python'
+            source: |
+              import requests
+
+              with open("image.jpg", "rb") as f:
+                  image_contents = f.read()
+
+              response = requests.post(
+                  "https://autoderm.ai/v1/query_genitals",
+                  headers={"Api-Key": "Your API Key"},
+                  files={"file": image_contents},
+                  params={"model": "genitals_v1_0"}
+              )
+
+              if response.status_code != 200:
+                  print(f'status_error: {response.status_code}')
+              else:
+                  data = response.json()
+                  print(data)
+          - lang: 'cURL'
+            source: |
+              curl -X POST "https://autoderm.ai/v1/query_genitals?model=genitals_v1_0" \
+                   -H "Api-Key: Your API Key" \
+                   -H "Content-Type: multipart/form-data" \
+                   -F "file=@image.jpg"
+          - lang: 'JavaScript'
+            source: |
+              const formData = new FormData();
+              formData.append('file', document.getElementById('inputFile').files[0]);
+
+              fetch('https://autoderm.ai/v1/query_genitals?model=genitals_v1_0', {
+                method: 'POST',
+                headers: {
+                  'Api-Key': 'Your API Key'
+                },
+                body: formData
+              })
+              .then(response => {
+                if (!response.ok) {
+                  throw new Error(`status_error: ${response.status}`);
+                }
+                return response.json();
+              })
+              .then(data => console.log(data))
+              .catch(error => console.error('Error:', error));
+  /v1/utils/healthz:
+    get:
+      tags:
+        - utils
+      summary: Check server health
+      operationId: checkServerHealth
+      description: |
+        Endpoint to test if the server is alive. It returns a simple text response indicating the server's status.
+      responses:
+        '200':
+          description: Server is alive
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: 'Server is up and running'
+        '500':
+          description: Server is down
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: 'Server is not responding'
+      x-codeSamples:
+        - lang: 'Python'
+          source: |
+            import requests
+            response = requests.get('https://autoderm.ai/v1/utils/healthz')
+            print(response.text)
+        - lang: 'cURL'
+          source: |
+            curl -X GET "https://autoderm.ai/v1/utils/healthz"
+        - lang: 'JavaScript'
+          source: |
+            fetch('https://autoderm.ai/v1/utils/healthz')
+              .then(response => response.text())
+              .then(data => console.log(data))
+              .catch(error => console.error('Error:', error));
+        - lang: 'Rust'
+          source: |
+            use reqwest;
+
+            #[tokio::main]
+            async fn main() -> Result<(), reqwest::Error> {
+                let res = reqwest::get("https://autoderm.ai/v1/utils/healthz")
+                    .await?
+                    .text()
+                    .await?;
+                println!("{}", res);
+                Ok(())
+            }
+  /v1/utils/check_blur:
+    post:
+     summary: Check blur in an image
+     description: Send an image to check if it's blurry based on a certain threshold. In production, image are not binary between what is blurry or not. Using this improves the performances of the model by trimming to top 30% of the images considered blurry.
+     requestBody:
+       content:
+         multipart/form-data:
+           schema:
+             type: object
+             properties:
+               file:
+                 type: string
+                 format: binary
+     parameters:
+       - in: query
+         name: threshold
+         schema:
+           type: number
+           description: Blur threshold, we recommend a value of 50.0 which trims down 30% of the usual blurred images in production. You can test with your own image sources for your ideal value.
+           minimum: 0.0
+           maximum: 300.0
+     responses:
+       '200':
+         description: Successful operation
+         content:
+           application/json:
+             schema:
+               $ref: '#/components/schemas/Response'
+       default:
+         description: Error
+         content:
+           application/json:
+             schema:
+               $ref: '#/components/schemas/Error'
+     x-code-samples:
+             - lang: Python
+               source: |
+                 import requests
+
+                 # Replace YOUR_API_KEY with your actual API key
+                 API_KEY = 'YOUR_API_KEY'
+
+                 # Open the test image and read the bytes
+                 with open('skin.JPG', 'rb') as f:
+                     image_contents = f.read()
+
+                 # Send the query
+                 response = requests.post(
+                     'https://autoderm.ai/v1/utils/check_blur',
+                     headers={'Api-Key': API_KEY},
+                     files={'file': image_contents},
+                     params={'threshold': 50.0}
+                 )
+
+                 # Print the response content
+                 print(response.content)
+
+                 if response.status_code != 200:
+                     print(f'status_error: {response.status_code}')
+                 else:
+                     # Get the JSON data returned
+                     data = response.json()
+
+                     print(f'data: {data}')
+  /v1/classifications:
+    get:
+      tags:
+        - classifications
+      summary: Retrieve a list of available classifications
+      operationId: getClassifications
+      description: |
+        This endpoint provides a list of all available disease classifications including their ID, ICD code, and name.
+      parameters:
+         - in: query
+           name: model
+           description: The AI model to be used for prediction. Available values are autoderm_v2_2 (latest), autoderm_v2_1, autoderm_v2_0, autoderm_v1_1, autoderm_v1_0.
+           schema:
+           type: string
+      responses:
+        '200':
+          description: List of available classifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Classification'
+
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: Api-Key
+  schemas:
+    DiseasePrediction:
+      type: object
+      required:
+        - confidence
+        - icd
+        - name
+        - classificationId
+        - readMoreUrl
+      properties:
+        confidence:
+          type: number
+          format: float
+          description: |
+            A confidence score between 0 and 1 indicating the model's certainty for this disease prediction.
+
+            UI Suggestion:
+            - **High Possibility**: 33% (0.33) or higher
+            - **Possible**: Between 10% (0.10) and 33% (0.33)
+            - **Unlikely**: Less than 10% (0.10)
+
+            You can use these thresholds to label the predictions in your user interface accordingly.      
+        icd:
+          type: string
+        name:
+          type: string
+        classificationId:
+          type: string
+        readMoreUrl:
+          type: string
+          format: uri
+    Classification:
+      type: object
+      required:
+        - id
+        - icd
+        - name
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the classification
+        icd:
+          type: string
+          description: The International Classification of Diseases (ICD) code
+        name:
+          type: string
+          description: Name of the disease or condition
+    Response:
+         type: object
+         properties:
+           is_blurry:
+             type: boolean
+             description: Indicates whether the image is blurry or not
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+
+
+security:
+  - ApiKeyAuth: []
