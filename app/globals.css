@@ -1,0 +1,291 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 199 100% 56%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 98%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 97.5%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 97.5%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 172 76% 39%; /* #14B8A6 bright teal */
+    --input: 172 76% 39%;
+    --ring: 199 100% 56%;
+    --radius: 0.5rem;
+
+    /* Theme Customizer Variables */
+    --theme-contrast: 1;
+    --theme-saturation: 1.1;
+    --theme-primary: #0ea5e9;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 199 89% 48%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 199 89% 48%;
+  }
+
+  html {
+    font-size: 18px;
+  }
+
+  h1 {
+    font-size: 2.5rem;
+  }
+
+  h2 {
+    font-size: 2rem;
+  }
+
+  h3 {
+    font-size: 1.5rem;
+  }
+
+  p, li, button, input, label, span, div {
+    font-size: 1.125rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Card and input shadow for light mode */
+@layer components {
+  .card, .input, .bg-white {
+    @apply shadow-md;
+  }
+  .card {
+    @apply border border-[color:hsl(var(--border))] bg-white rounded-xl;
+  }
+}
+
+/* Theme Customizer Styles */
+:root {
+  --transition-duration: 0.3s;
+}
+
+/* Apply theme customizations */
+[data-theme] {
+  transition: background-color var(--transition-duration) ease,
+              color var(--transition-duration) ease,
+              border-color var(--transition-duration) ease;
+}
+
+/* Apply contrast and saturation */
+[data-theme] * {
+  filter: contrast(var(--theme-contrast)) saturate(var(--theme-saturation));
+  transition: filter var(--transition-duration) ease;
+}
+
+/* Apply primary color */
+[data-theme] .bg-primary {
+  background-color: var(--theme-primary) !important;
+}
+
+[data-theme] .text-primary {
+  color: var(--theme-primary) !important;
+}
+
+[data-theme] .border-primary {
+  border-color: var(--theme-primary) !important;
+}
+
+/* Smooth transitions for all theme changes */
+* {
+  transition: background-color var(--transition-duration) ease,
+              color var(--transition-duration) ease,
+              border-color var(--transition-duration) ease,
+              box-shadow var(--transition-duration) ease;
+}
+
+/* Accessibility styles */
+.a11y-high-contrast {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 0%;
+  --primary: 200 100% 35%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 85%;
+  --secondary-foreground: 0 0% 0%;
+  --border: 0 0% 0%;
+  --focus-ring: 0 100% 50%;
+  --focus-ring-width: 3px;
+  
+  & .dark {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    --primary: 200 100% 65%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 0 0% 25%;
+    --secondary-foreground: 0 0% 100%;
+    --border: 0 0% 100%;
+    --focus-ring: 60 100% 50%;
+    --focus-ring-width: 3px;
+  }
+  
+  & a, & button, & input, & select, & textarea {
+    @apply outline-2 outline-offset-2;
+  }
+  
+  & *:focus {
+    outline: var(--focus-ring-width) solid hsl(var(--focus-ring)) !important;
+  }
+}
+
+.a11y-large-text {
+  font-size: 120% !important;
+  
+  & h1 {
+    font-size: 2.5rem !important;
+  }
+  
+  & h2 {
+    font-size: 2rem !important;
+  }
+  
+  & h3 {
+    font-size: 1.75rem !important;
+  }
+  
+  & p, & li, & button, & input, & label {
+    font-size: 1.2rem !important;
+  }
+}
+
+.a11y-reduced-motion * {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* Increased spacing for readability */
+html[data-line-spacing="wide"] {
+  & p, & li, & label, & div {
+    line-height: 1.8 !important;
+  }
+}
+
+html[data-line-spacing="wider"] {
+  & p, & li, & label, & div {
+    line-height: 2.2 !important;
+  }
+}
+
+html[data-letter-spacing="wide"] {
+  & p, & li, & label, & div {
+    letter-spacing: 0.025em !important;
+  }
+}
+
+html[data-letter-spacing="wider"] {
+  & p, & li, & label, & div {
+    letter-spacing: 0.05em !important;
+  }
+}
+
+/* Focus ring for keyboard users */
+*:focus-visible {
+  outline: var(--focus-ring-width) solid hsl(var(--focus-ring)) !important;
+  outline-offset: 2px;
+}
+
+/* Skip to content link */
+.skip-to-content {
+  @apply sr-only absolute z-50 bg-background text-foreground px-4 py-2 border-2 border-primary;
+}
+
+.skip-to-content:focus {
+  @apply not-sr-only top-2 left-2;
+}
+
+/* Original animations */
+@keyframes pulse-glow {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(1.2);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.25);
+  }
+}
+
+.animate-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-fast {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(1.3);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.35);
+  }
+}
+
+.animate-pulse-fast {
+  animation: pulse-fast 1.5s ease-in-out infinite;
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.animate-ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Prevent animations for reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
