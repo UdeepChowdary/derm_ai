@@ -13,11 +13,17 @@ export default function HistoryPage() {
   const { reports } = useHistory()
   const [search, setSearch] = useState("")
   const filteredReports = reports.filter((report) => {
+    if (!report) return false
+    
     const q = search.toLowerCase()
+    const condition = report.condition || ''
+    const description = report.description || ''
+    const date = report.date || ''
+    
     return (
-      report.condition.toLowerCase().includes(q) ||
-      report.description.toLowerCase().includes(q) ||
-      report.date.toLowerCase().includes(q)
+      (typeof condition === 'string' && condition.toLowerCase().includes(q)) ||
+      (typeof description === 'string' && description.toLowerCase().includes(q)) ||
+      (typeof date === 'string' && date.toLowerCase().includes(q))
     )
   })
 

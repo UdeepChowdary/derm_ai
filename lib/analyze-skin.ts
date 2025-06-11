@@ -239,22 +239,22 @@ function getRiskScoreFromConfidence(confidence: number): number {
   return 25;                             // Mild
 }
 
-export async function analyzeSkinImage(imageData: string): Promise<SkinAnalysisResult> {
-  // Helper function to get mock data as fallback
-  const getMockData = () => {
-    const randomIndex = Math.floor(Math.random() * mockAnalysisResults.length);
-    console.log('Using mock data for analysis');
-    return {
-      ...mockAnalysisResults[randomIndex],
-      id: `mock-${Date.now()}`,
-      isMock: true
-    } as SkinAnalysisResult;
-  };
+// Special type for non-skin image results
+export type NonSkinImageResult = {
+  isNonSkinImage: true;
+  message: string;
+};
 
-  // If no API key is provided, use mock data
+export type AnalysisResult = SkinAnalysisResult | NonSkinImageResult;
+
+export async function analyzeSkinImage(imageData: string): Promise<AnalysisResult> {
+  // If no API key is provided, return an error
   if (!API_KEYS.AUTODERM_API_KEY) {
-    console.warn('No API key provided, using mock data');
-    return getMockData();
+    console.warn('No API key provided');
+    return {
+      isNonSkinImage: true,
+      message: 'API key is not configured. Please contact support.'
+    };
   }
 
   try {
@@ -294,21 +294,42 @@ export async function analyzeSkinImage(imageData: string): Promise<SkinAnalysisR
       const errorText = await response.text();
       console.error('API Error Response:', errorText);
       
-      // If API limit reached or other API error, fall back to mock data
-      if (response.status === 429 || response.status >= 400) {
-        console.warn('API error, falling back to mock data');
-        return getMockData();
+      // If image is not of skin, return specific error
+      if (response.status === 400 && errorText.includes('not of skin')) {
+        console.warn('Non-skin image detected');
+        return {
+          isNonSkinImage: true,
+          message: 'This image does not contain human skin and cannot be analyzed.'
+        };
       }
       
-      throw new Error(`API request failed with status ${response.status}: ${errorText}`);
+      // For other API errors, return generic error
+      console.warn('API error');
+      return {
+        isNonSkinImage: true,
+        message: 'Unable to analyze the image. Please try again with a clearer photo.'
+      };
     }
 
     const data = await response.json();
     console.log('API Response:', data);
 
     if (!data.success) {
-      console.warn('API returned unsuccessful response, falling back to mock data:', data.message);
-      return getMockData();
+      // Handle non-skin image case
+      if (data.message && (data.message.includes('not of skin') || data.message.includes('no skin'))) {
+        console.warn('Non-skin image detected:', data.message);
+        return {
+          isNonSkinImage: true,
+          message: 'This image does not contain human skin and cannot be analyzed.'
+        };
+      }
+      
+      // Handle other unsuccessful responses
+      console.warn('API returned unsuccessful response:', data.message);
+      return {
+        isNonSkinImage: true,
+        message: 'Unable to analyze the image. Please try again with a clearer photo.'
+      };
     }
 
     // Get the top prediction
@@ -339,7 +360,10 @@ export async function analyzeSkinImage(imageData: string): Promise<SkinAnalysisR
     return result;
   } catch (error) {
     console.error('Error analyzing skin image:', error);
-    // Fallback to mock data only if API call fails
-    return getMockData();
+    // Return error for any other failures
+    return {
+      isNonSkinImage: true,
+      message: 'An error occurred while analyzing the image. Please try again.'
+    };
   }
 }

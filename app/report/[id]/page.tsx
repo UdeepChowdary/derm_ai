@@ -45,10 +45,19 @@ export default function ReportPage({ params }: ReportParams) {
   const [previousReports, setPreviousReports] = useState<any[]>([])
   const reportRef = useRef<HTMLDivElement>(null)
   const [activeTab, setActiveTab] = useState("overview")
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     if (!id) return;
+    
+    // Check if reports are loaded
+    if (reports.length === 0) {
+      console.log("Reports not loaded yet")
+      return
+    }
+    
     const foundReport = reports.find((r) => r.id === id)
+    
     if (foundReport) {
       console.log("Found report:", foundReport)
       setReport(foundReport)
@@ -58,22 +67,43 @@ export default function ReportPage({ params }: ReportParams) {
       const previousRelatedReports = reports
         .filter(r => 
           r.id !== id && 
-          r.condition.toLowerCase().includes(condition) &&
+          r.condition?.toLowerCase()?.includes(condition) &&
           new Date(r.date) < new Date(foundReport.date)
         )
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       
       setPreviousReports(previousRelatedReports)
+      setIsLoading(false)
     } else {
-      console.error("Report not found, redirecting to home")
-      router.push("/home")
+      console.error("Report not found in reports:", { id, reports })
+      // Only redirect if we're sure the report doesn't exist
+      const timer = setTimeout(() => {
+        if (reports.length > 0) { // Only redirect if we've actually loaded reports
+          console.log("Report not found after loading, redirecting to home")
+          router.push("/home")
+        }
+      }, 1000) // Give it a second to make sure reports are loaded
+      
+      return () => clearTimeout(timer)
     }
   }, [id, reports, router])
 
-  if (!report) {
+  if (isLoading || !report) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900">
-        <p className="text-slate-500 dark:text-slate-400">Loading report...</p>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900 p-4">
+        <div className="mb-4">
+          <InteractiveLogo size="lg" />
+        </div>
+        <p className="text-slate-500 dark:text-slate-400 mb-4">
+          {reports.length === 0 ? 'Loading your reports...' : 'Loading report details...'}
+        </p>
+        <Button 
+          variant="outline" 
+          onClick={() => router.push('/home')}
+          className="mt-4"
+        >
+          Back to Home
+        </Button>
       </div>
     )
   }
