@@ -243,8 +243,19 @@ export async function analyzeSkinImage(imageData: string): Promise<SkinAnalysisR
   // Helper function to get mock data as fallback
   const getMockData = () => {
     const randomIndex = Math.floor(Math.random() * mockAnalysisResults.length);
-    return mockAnalysisResults[randomIndex];
+    console.log('Using mock data for analysis');
+    return {
+      ...mockAnalysisResults[randomIndex],
+      id: `mock-${Date.now()}`,
+      isMock: true
+    } as SkinAnalysisResult;
   };
+
+  // If no API key is provided, use mock data
+  if (!API_KEYS.AUTODERM_API_KEY) {
+    console.warn('No API key provided, using mock data');
+    return getMockData();
+  }
 
   try {
     // Convert base64 to blob
@@ -282,6 +293,13 @@ export async function analyzeSkinImage(imageData: string): Promise<SkinAnalysisR
     if (!response.ok) {
       const errorText = await response.text();
       console.error('API Error Response:', errorText);
+      
+      // If API limit reached or other API error, fall back to mock data
+      if (response.status === 429 || response.status >= 400) {
+        console.warn('API error, falling back to mock data');
+        return getMockData();
+      }
+      
       throw new Error(`API request failed with status ${response.status}: ${errorText}`);
     }
 
@@ -289,7 +307,8 @@ export async function analyzeSkinImage(imageData: string): Promise<SkinAnalysisR
     console.log('API Response:', data);
 
     if (!data.success) {
-      throw new Error(data.message || 'Analysis failed');
+      console.warn('API returned unsuccessful response, falling back to mock data:', data.message);
+      return getMockData();
     }
 
     // Get the top prediction

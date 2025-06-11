@@ -51,6 +51,15 @@ const pollutionLevels = {
 }
 
 export function UVIndexTracker() {
+  // Debug log to check if API key is loaded
+  React.useEffect(() => {
+    console.log('OpenWeatherMap API Key:', API_KEYS.OPENWEATHER_API_KEY);
+    console.log('Environment Variables:', {
+      NEXT_PUBLIC_OPENWEATHER_API_KEY: process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY,
+      NODE_ENV: process.env.NODE_ENV
+    });
+  }, []);
+
   const [uvData, setUVData] = React.useState<UVData | null>(null)
   const [pollutionData, setPollutionData] = React.useState<PollutionData | null>(null)
   const [isLoading, setIsLoading] = React.useState(false)
