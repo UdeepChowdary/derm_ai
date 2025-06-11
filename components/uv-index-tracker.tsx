@@ -53,9 +53,10 @@ const pollutionLevels = {
 export function UVIndexTracker() {
   // Debug log to check if API key is loaded
   React.useEffect(() => {
-    console.log('OpenWeatherMap API Key:', API_KEYS.OPENWEATHER_API_KEY);
+    console.log('OpenUV API Key:', API_KEYS.OPENUV_API_KEY);
+    console.log('WAQI Token:', API_KEYS.WAQI_API_TOKEN);
     console.log('Environment Variables:', {
-      NEXT_PUBLIC_OPENWEATHER_API_KEY: process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY,
+      NEXT_PUBLIC_OPENUV_API_KEY: process.env.NEXT_PUBLIC_OPENUV_API_KEY,
       NODE_ENV: process.env.NODE_ENV
     });
   }, []);
@@ -183,9 +184,14 @@ export function UVIndexTracker() {
       const geocodingData = await geocodingResponse.json()
       const locationName = geocodingData[0]?.name || 'Your Location'
       
-      // Fetch actual UV index from OpenWeatherMap API
+      // Fetch actual UV index from OpenUV API
       const response = await fetch(
-        `https://api.openweathermap.org/data/2.5/onecall?lat=${latitude}&lon=${longitude}&exclude=minutely,hourly,daily,alerts&appid=${API_KEYS.OPENWEATHER_API_KEY}&units=metric`
+        `https://api.openuv.io/api/v1/uv?lat=${latitude}&lng=${longitude}`,
+        {
+          headers: {
+            'x-access-token': API_KEYS.OPENUV_API_KEY
+          }
+        }
       )
       
       if (!response.ok) {
@@ -193,7 +199,7 @@ export function UVIndexTracker() {
       }
       
       const data = await response.json()
-      const uvIndex = Math.round(data.current.uvi) // Current UV index
+      const uvIndex = Math.round(data.result.uv) // Current UV index
       const risk = determineUVRisk(uvIndex)
       
       // Get protection recommendations based on UV level
@@ -204,7 +210,7 @@ export function UVIndexTracker() {
         risk: risk,
         protection: protectionRecs,
         location: locationName,
-        lastUpdated: new Date(data.current.dt * 1000).toLocaleString(),
+        lastUpdated: new Date().toLocaleString(),
       }
 
       setUVData(newUVData)
@@ -239,64 +245,48 @@ export function UVIndexTracker() {
       
       const { latitude, longitude } = position.coords
       
-      // Fetch location name if not already done in getUVData
-      let locationName = "Your Location"
-      if (uvData?.location) {
-        locationName = uvData.location
-      } else {
-        try {
-          const geocodingResponse = await fetch(
-            `https://api.openweathermap.org/geo/1.0/reverse?lat=${latitude}&lon=${longitude}&limit=1&appid=${API_KEYS.OPENWEATHER_API_KEY}`
-          )
-          const geocodingData = await geocodingResponse.json()
-          locationName = geocodingData[0]?.name || 'Your Location'
-        } catch (error) {
-          console.error("Error fetching location name:", error)
-        }
-      }
-      
-      // Fetch air pollution data from OpenWeatherMap API
-      const pollutionResponse = await fetch(
-        `https://api.openweathermap.org/data/2.5/air_pollution?lat=${latitude}&lon=${longitude}&appid=${API_KEYS.OPENWEATHER_API_KEY}`
+      // Fetch air quality data from WAQI (World Air Quality Index) API
+      const waqiResponse = await fetch(
+        `https://api.waqi.info/feed/geo:${latitude};${longitude}/?token=${API_KEYS.WAQI_API_TOKEN}`
       )
       
-      if (!pollutionResponse.ok) {
-        throw new Error('Failed to fetch air pollution data')
+      if (!waqiResponse.ok) {
+        throw new Error('Failed to fetch air quality data')
       }
       
-      const pollutionData = await pollutionResponse.json()
-      const currentPollution = pollutionData.list[0] // Current pollution data
-      
-      // Convert OpenWeatherMap AQI (1-5 scale) to standard AQI (0-500 scale)
-      const apiAqi = currentPollution.main.aqi
-      let standardAqi: number
-      
-      switch(apiAqi) {
-        case 1: standardAqi = 25; break // mid-value of 0-50 range
-        case 2: standardAqi = 75; break // mid-value of 51-100 range
-        case 3: standardAqi = 125; break // mid-value of 101-150 range
-        case 4: standardAqi = 175; break // mid-value of 151-200 range
-        case 5: standardAqi = 300; break // higher value in very unhealthy range
-        default: standardAqi = 50 // fallback
+      const waqiData = await waqiResponse.json()
+      if (waqiData.status !== 'ok') {
+        throw new Error('Invalid response from WAQI API')
       }
       
-      const pollutionLevel = determinePollutionLevel(standardAqi)
+      // Use city name from WAQI if available
+      let locationName = "Your Location"
+      if (waqiData.data?.city?.name) {
+        locationName = waqiData.data.city.name
+      }
       
-      // Extract pollutant values
-      const { pm2_5, pm10, o3, no2 } = currentPollution.components
+      const aqi = waqiData.data.aqi as number
+      const pollutionLevel = determinePollutionLevel(aqi)
+      
+      // Extract pollutant concentrations if available
+      const iaqi = waqiData.data.iaqi || {}
+      const pm25 = iaqi.pm25?.v ?? 0
+      const pm10 = iaqi.pm10?.v ?? 0
+      const o3 = iaqi.o3?.v ?? 0
+      const no2 = iaqi.no2?.v ?? 0
       
       const newPollutionData: PollutionData = {
-        aqi: standardAqi,
+        aqi: aqi,
         level: pollutionLevel,
         pollutants: {
-          pm25: pm2_5,
-          pm10: pm10,
-          o3: o3,
-          no2: no2,
+          pm25,
+          pm10,
+          o3,
+          no2,
         },
         healthEffects: getHealthEffects(pollutionLevel),
         location: locationName,
-        lastUpdated: new Date(currentPollution.dt * 1000).toLocaleString(),
+        lastUpdated: waqiData.data.time?.s || new Date().toLocaleString(),
       }
 
       setPollutionData(newPollutionData)

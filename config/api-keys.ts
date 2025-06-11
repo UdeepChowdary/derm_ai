@@ -2,9 +2,12 @@
 // For security, in a production environment, these should be environment variables
 
 export const API_KEYS = {
-  // OpenWeatherMap API key
-  OPENWEATHER_API_KEY: process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY || "", // Use NEXT_PUBLIC_ prefix for client-side access
+  // OpenUV API key
+  OPENUV_API_KEY: process.env.NEXT_PUBLIC_OPENUV_API_KEY || "openuv-cvlzrmbrttjbw-io", // User-provided OpenUV key
   // Autoderm API key
-  AUTODERM_API_KEY: process.env.AUTODERM_API_KEY || "8ab3a40f-c956-c332-521d-f8e13b46042d"
-  // Using only free APIs that don't require registration
+  AUTODERM_API_KEY: process.env.AUTODERM_API_KEY || "ddecf1fe-d679-77fb-52a4-28a89d71623a",
+  // Keep OpenWeatherMap key for geocoding / pollution if desired (optional)
+  OPENWEATHER_API_KEY: process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY || "9b535cc211e5131904e753822f4f45a7",
+  // World Air Quality Index (WAQI) token
+  WAQI_API_TOKEN: process.env.NEXT_PUBLIC_WAQI_API_TOKEN || "cef12b67298c79b6ea937d61ae8fb3438f9ef83b",
 } as const;

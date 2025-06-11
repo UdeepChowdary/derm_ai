@@ -2,13 +2,13 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Camera, Upload, AlertCircle } from "lucide-react"
+import { Camera, Upload, X, Loader2, AlertCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { BottomNavigation } from "@/components/bottom-navigation"
 import { InteractiveLogo } from "@/components/interactive-logo"
 import { PageTransition } from "@/components/page-transition"
-import { AutoDermResponse } from "@/lib/analyze-skin"
+import { analyzeSkinImage, type AnalysisResult, type SkinAnalysisResult } from "@/lib/analyze-skin"
 
 export default function HomePage() {
   const router = useRouter()
@@ -16,6 +16,8 @@ export default function HomePage() {
   const [showCamera, setShowCamera] = useState(false)
   const [capturedImage, setCapturedImage] = useState<string | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [isNonSkinImage, setIsNonSkinImage] = useState(false)
+  const [showNonSkinPopup, setShowNonSkinPopup] = useState(false)
   const [analysis, setAnalysis] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -51,57 +53,77 @@ export default function HomePage() {
   }
 
   const analyzeImage = async () => {
-    if (!capturedImage) return
+    console.log('Starting image analysis...')
+    if (!capturedImage) {
+      console.log('No captured image, returning early')
+      return
+    }
+    
+      try {
+      console.log('Starting image analysis...')
+      const result = await analyzeSkinImage(capturedImage)
+      
+      // Check if it's a non-skin image result
+      if ('isNonSkinImage' in result) {
+        console.log('Non-skin image detected:', result.message)
+        setIsAnalyzing(false)
+        setIsNonSkinImage(true)
+        setError(result.message)
+        setShowNonSkinPopup(true)
+        return
+      }
+      
+      // If we get here, it's a valid skin analysis result
+      const analysis = result as SkinAnalysisResult
+      console.log('Analysis successful:', analysis.condition)
+      setAnalysis(analysis)
+      
+      // Save to history
+      const history = JSON.parse(localStorage.getItem('analysisHistory') || '[]')
+      const newHistory = [
+        {
+          id: analysis.id || Date.now().toString(),
+          condition: analysis.condition,
+          date: new Date().toISOString(),
+          image: capturedImage
+        },
+        ...history
+      ]
+      localStorage.setItem('analysisHistory', JSON.stringify(newHistory))
+      
+      // Navigate to results page
+      router.push(`/report/${analysis.id || 'new'}`)
+    } catch (error) {
+      console.error('Error analyzing image:', error)
+      setError('An error occurred while analyzing the image. Please try again.')
+    } finally {
+      setIsAnalyzing(false)
+    }
+    
+    // If we get here, it's a valid skin image, proceed with analysis
+    console.log('Proceeding with full skin analysis...')
     setIsAnalyzing(true)
     setError(null)
     
     try {
-      // Convert base64 image to blob
-      const response = await fetch(capturedImage)
-      const blob = await response.blob()
+      const result = await analyzeSkinImage(capturedImage)
+      console.log('Analysis result:', result)
       
-      // Create form data
-      const formData = new FormData()
-      formData.append('file', blob, 'skin-image.jpg')
+      // It's a valid skin analysis result
+      const analysis = result as SkinAnalysisResult
       
-      // Make API call to Auto Derm
-      const apiResponse = await fetch('https://autoderm.ai/v1/query', {
-        method: 'POST',
-        headers: {
-          'Api-Key': process.env.NEXT_PUBLIC_AUTODERM_API_KEY || 'c24df526-615d-56ef-f8db-110f0f7481fd'
-        },
-        body: formData
-      })
-
-      if (!apiResponse.ok) {
-        throw new Error(`API request failed with status ${apiResponse.status}`)
-      }
-
-      const data = await apiResponse.json() as AutoDermResponse
-      
-      if (!data.success) {
-        throw new Error(data.message || 'API request failed')
-      }
-      
-      // Get the top prediction
-      const topPrediction = data.predictions[0]
-      
-      // Map the API response to our analysis format
+      // Map the analysis to our state
       setAnalysis({
-        name: topPrediction.name,
-        description: `Detected with ${(topPrediction.confidence * 100).toFixed(1)}% confidence`,
-        severity: topPrediction.confidence >= 0.75 ? 'Severe' : 
-                 topPrediction.confidence >= 0.5 ? 'Moderate' : 'Mild',
-        recommendations: [
-          "Consult a dermatologist for professional evaluation",
-          "Keep the affected area clean and dry",
-          "Avoid scratching or irritating the area",
-          "Monitor for any changes in the condition"
-        ],
+        name: analysis.condition,
+        description: analysis.description,
+        severity: analysis.severity,
+        riskScore: analysis.riskScore,
+        recommendations: analysis.recommendations,
         imageUrl: capturedImage,
-        confidence: topPrediction.confidence,
-        icdCode: topPrediction.icd,
-        readMoreUrl: topPrediction.readMoreUrl
+        confidence: analysis.confidence,
+        conditionDetails: analysis.conditionDetails,
+        preventionTips: analysis.preventionTips,
+        additionalNotes: analysis.additionalNotes
       })
     } catch (error) {
       console.error('Error analyzing skin image:', error)
@@ -120,6 +142,125 @@ export default function HomePage() {
       router.push("/upload")
       setIsLoading(false)
     }, 1000)
+  }
+
+  // Handle non-skin popup close
+  const handleNonSkinPopupClose = () => {
+    console.log('Closing non-skin popup')
+    setShowNonSkinPopup(false)
+    setCapturedImage(null)
+    setError(null)
+    setIsNonSkinImage(false)
+    setIsAnalyzing(false)
+    router.push('/')
+  }
+
+  // Add debug effect
+  useEffect(() => {
+    console.log('Popup state:', { showNonSkinPopup, isNonSkinImage, error });
+  }, [showNonSkinPopup, isNonSkinImage, error]);
+
+  // Show non-skin popup
+  if (showNonSkinPopup) {
+    console.log('Rendering non-skin popup');
+    return (
+      <div 
+        className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 p-4"
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <div className="bg-white dark:bg-slate-800 rounded-lg max-w-md w-full p-6 shadow-2xl transform transition-all">
+          <div className="text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/50 mb-4">
+              <AlertCircle className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">
+              Not a Skin Image
+            </h3>
+            <div className="mt-2">
+              <p className="text-base text-slate-700 dark:text-slate-300">
+                This image does not contain human skin and cannot be analyzed.
+              </p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+                Please upload a clear photo of a skin condition.
+              </p>
+            </div>
+            <div className="mt-6">
+              <button
+                type="button"
+                className="inline-flex justify-center rounded-md border border-transparent bg-amber-600 px-6 py-2.5 text-base font-medium text-white hover:bg-amber-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 transition-colors"
+                onClick={handleNonSkinPopupClose}
+              >
+                OK, I understand
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show loading state when analyzing
+  if (isAnalyzing) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900 p-4">
+        <div className="w-full max-w-md p-6 bg-white dark:bg-slate-800 rounded-lg shadow-lg text-center">
+          <div className="flex flex-col items-center">
+            <div className={`rounded-full p-4 mb-4 ${
+              isNonSkinImage 
+                ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400'
+                : 'bg-teal-100 dark:bg-teal-900/50 text-teal-500 dark:text-teal-400'
+            }`}>
+              {isNonSkinImage ? (
+                <AlertCircle className="w-10 h-10 animate-pulse" />
+              ) : (
+                <Camera className="w-10 h-10 animate-pulse" />
+              )}
+            </div>
+            
+            <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-2">
+              {isNonSkinImage ? 'Not a Skin Image' : 'Analyzing Skin...'}
+            </h2>
+            
+            <p className={`text-lg mb-6 ${
+              isNonSkinImage 
+                ? 'text-amber-600 dark:text-amber-400 font-medium'
+                : 'text-slate-500 dark:text-slate-400'
+            }`}>
+              {isNonSkinImage 
+                ? 'This image is not a human skin image.'
+                : 'Please wait while we analyze your skin condition...'}
+            </p>
+            
+            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 mb-4">
+              <div 
+                className={`h-2.5 rounded-full ${
+                  isNonSkinImage ? 'bg-amber-500' : 'bg-teal-500'
+                }`}
+                style={{
+                  width: isNonSkinImage ? '100%' : '70%',
+                  animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                }}
+              ></div>
+            </div>
+            
+            {isNonSkinImage && (
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Redirecting you back to the home page...
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -147,15 +288,22 @@ export default function HomePage() {
 
           <div className="grid gap-6">
             {error && (
-              <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4">
+              <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
                 <div className="flex">
                   <div className="flex-shrink-0">
-                    <AlertCircle className="h-5 w-5 text-red-400" />
+                    <AlertCircle className="h-5 w-5 text-amber-500" />
                   </div>
                   <div className="ml-3">
-                    <h3 className="text-sm font-medium text-red-800 dark:text-red-200">Error</h3>
-                    <div className="mt-2 text-sm text-red-700 dark:text-red-300">
+                    <h3 className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                      {error.includes('not of skin') ? 'Non-Skin Image' : 'Notice'}
+                    </h3>
+                    <div className="mt-2 text-sm text-amber-700 dark:text-amber-300">
                       <p>{error}</p>
+                      {error.includes('not of skin') && (
+                        <p className="mt-2">
+                          Please take a clear photo of the skin condition you want to analyze.
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
