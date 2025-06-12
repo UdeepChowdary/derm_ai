@@ -50,42 +50,54 @@ export default function ReportPage({ params }: ReportParams) {
   useEffect(() => {
     if (!id) return;
     
-    // Check if reports are loaded
-    if (reports.length === 0) {
-      console.log("Reports not loaded yet")
-      return
-    }
-    
-    const foundReport = reports.find((r) => r.id === id)
+    // Initial check
+    const foundReport = reports.find((r) => r.id === id);
     
     if (foundReport) {
-      console.log("Found report:", foundReport)
-      setReport(foundReport)
+      console.log("Found report:", foundReport);
+      setReport(foundReport);
       
       // Find previous reports for the same condition (for trend analysis)
-      const condition = foundReport.condition.toLowerCase()
+      const condition = foundReport.condition?.toLowerCase();
       const previousRelatedReports = reports
         .filter(r => 
           r.id !== id && 
           r.condition?.toLowerCase()?.includes(condition) &&
           new Date(r.date) < new Date(foundReport.date)
         )
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       
-      setPreviousReports(previousRelatedReports)
-      setIsLoading(false)
-    } else {
-      console.error("Report not found in reports:", { id, reports })
-      // Only redirect if we're sure the report doesn't exist
-      const timer = setTimeout(() => {
-        if (reports.length > 0) { // Only redirect if we've actually loaded reports
-          console.log("Report not found after loading, redirecting to home")
-          router.push("/home")
-        }
-      }, 1000) // Give it a second to make sure reports are loaded
-      
-      return () => clearTimeout(timer)
+      setPreviousReports(previousRelatedReports);
+      setIsLoading(false);
+      return;
     }
+    
+    // If not found immediately, wait a bit and check again
+    // (in case the state update is still in progress)
+    const timer = setTimeout(() => {
+      const foundReport = reports.find((r) => r.id === id);
+      if (foundReport) {
+        setReport(foundReport);
+        setIsLoading(false);
+        
+        // Also update previous reports if needed
+        const condition = foundReport.condition?.toLowerCase();
+        const previousRelatedReports = reports
+          .filter(r => 
+            r.id !== id && 
+            r.condition?.toLowerCase()?.includes(condition) &&
+            new Date(r.date) < new Date(foundReport.date)
+          )
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        
+        setPreviousReports(previousRelatedReports);
+      } else {
+        console.error("Report not found after delay, redirecting to home");
+        router.push("/home");
+      }
+    }, 1000); // Wait 1 second before giving up
+    
+    return () => clearTimeout(timer);
   }, [id, reports, router])
 
   if (isLoading || !report) {

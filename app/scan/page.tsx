@@ -93,13 +93,20 @@ export default function ScanPage() {
         recommendations: analysis.recommendations,
         imageUrl: capturedImage,
       }
-      addReport(reportData)
+      
+      // Wait for the report to be added before redirecting
+      await new Promise<void>((resolve) => {
+        addReport(reportData)
+        // Give it a small delay to ensure state is updated
+        setTimeout(resolve, 100)
+      })
+      
       router.push(`/report/${reportData.id}`)
     } catch (error) {
       console.error('Failed to analyze image:', error)
       toast({
         title: "Analysis Failed",
-        description: error instanceof Error ? error.message : "Failed to analyze image. Please try again.",
+        description: "Could not analyze the image. Please try again.",
         variant: "destructive",
       })
     } finally {

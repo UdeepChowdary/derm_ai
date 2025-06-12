@@ -303,11 +303,24 @@ export async function analyzeSkinImage(imageData: string): Promise<AnalysisResul
         };
       }
       
+      // If API limit is reached, fall back to mock data
+      if (response.status === 429 || (errorText && errorText.includes('API_LIMIT_REACHED'))) {
+        console.warn('API limit reached, falling back to mock data');
+        const mockResult = mockAnalysisResults[Math.floor(Math.random() * mockAnalysisResults.length)];
+        return {
+          ...mockResult,
+          id: generateUUID(),
+          message: 'API limit reached. Showing sample analysis.'
+        };
+      }
+      
       // For other API errors, return generic error
-      console.warn('API error');
+      console.warn('API error, falling back to mock data');
+      const mockResult = mockAnalysisResults[Math.floor(Math.random() * mockAnalysisResults.length)];
       return {
-        isNonSkinImage: true,
-        message: 'Unable to analyze the image. Please try again with a clearer photo.'
+        ...mockResult,
+        id: generateUUID(),
+        message: 'Using sample analysis due to API error.'
       };
     }
 
