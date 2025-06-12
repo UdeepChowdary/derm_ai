@@ -18,7 +18,7 @@ import { useRouter } from "next/navigation"
 import { useRef, useState, useEffect } from "react"
 import { useHistory } from "@/components/history-provider"
 import Image from "next/image"
-import { analyzeSkinImage } from "@/lib/analyze-skin"
+import { analyzeSkinImage, isSkinAnalysisResult, isNonSkinImageResult } from "@/lib/analyze-skin"
 import { LoadingLogo } from "@/components/loading-logo"
 import { toast } from "@/components/ui/use-toast"
 import { Progress } from "@/components/ui/progress"
@@ -162,16 +162,41 @@ export default function UploadPage() {
     
     try {
       const analysis = await analyzeSkinImage(selectedImage)
+      console.log('Upload analysis result:', JSON.stringify(analysis, null, 2));
+
+      if (isNonSkinImageResult(analysis)) {
+        toast({
+          title: 'Non-skin Image',
+          description: analysis.message,
+          variant: 'destructive',
+        })
+        setIsAnalyzing(false)
+        return
+      }
+
       const reportData = {
-        id: analysis.id,
+        id: (analysis as any).id || `report-${Date.now()}`,
         date: new Date().toISOString(),
-        condition: analysis.condition,
-        description: analysis.description,
-        severity: analysis.severity,
-        recommendations: analysis.recommendations,
+        condition: (analysis as any).condition || 'Unknown Condition',
+        description: (analysis as any).description || 'No description available',
+        severity: (analysis as any).severity || 'Moderate',
+        recommendations: (analysis as any).recommendations || [
+          'Consult with a dermatologist for a professional evaluation.',
+          'Monitor the area for any changes in size, shape, or color.'
+        ],
         imageUrl: selectedImage,
         imageQuality: imageQuality ? imageQuality.score : null,
+        warning: (analysis as any).warning,
       }
+
+      if ((analysis as any).warning) {
+        toast({
+          title: 'Analysis Warning',
+          description: (analysis as any).warning,
+          variant: 'default',
+        })
+      }
+      
       addReport(reportData)
       
       // Success toast
