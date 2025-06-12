@@ -20,10 +20,15 @@
     --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 172 76% 39%; /* #14B8A6 bright teal */
+    --border: 172 76% 39%;
     --input: 172 76% 39%;
     --ring: 199 100% 56%;
     --radius: 0.5rem;
+
+    /* New accent colors */
+    --accent-1: 199 100% 56%;
+    --accent-2: 262 83% 58%;
+    --accent-3: 142 76% 36%;
 
     /* Theme Customizer Variables */
     --theme-contrast: 1;
@@ -43,7 +48,7 @@
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
     --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted-foreground: 215 20.2% 75.1%;
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
@@ -51,6 +56,11 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 199 89% 48%;
+
+    /* New accent colors for dark theme */
+    --accent-1: 199 89% 48%;
+    --accent-2: 262 83% 48%;
+    --accent-3: 142 76% 36%;
   }
 
   html {
@@ -84,19 +94,51 @@
   }
 }
 
-/* Card and input shadow for light mode */
+/* Enhanced Card and Input Styles */
 @layer components {
-  .card, .input, .bg-white {
-    @apply shadow-md;
-  }
   .card {
-    @apply border border-[color:hsl(var(--border))] bg-white rounded-xl;
+    @apply shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] border border-[color:hsl(var(--border))] bg-white rounded-xl;
+    background: linear-gradient(
+      to bottom right,
+      hsl(var(--card)),
+      hsl(var(--card-foreground) / 0.05)
+    );
+  }
+  
+  .dark .card {
+    @apply shadow-[0_2px_8px_-2px_rgba(0,0,0,0.3)] border border-[color:hsl(var(--border))] rounded-xl;
+    background: linear-gradient(
+      to bottom right,
+      hsl(var(--card)),
+      hsl(var(--card-foreground) / 0.1)
+    );
+  }
+  
+  .input {
+    @apply shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)];
+  }
+  
+  .dark .input {
+    @apply shadow-[0_2px_8px_-2px_rgba(0,0,0,0.3)];
+  }
+  
+  .bg-white {
+    @apply shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)];
   }
 }
 
 /* Theme Customizer Styles */
 :root {
   --transition-duration: 0.3s;
+}
+
+/* Enhanced Transitions */
+* {
+  transition: background-color var(--transition-duration) ease,
+              color var(--transition-duration) ease,
+              border-color var(--transition-duration) ease,
+              box-shadow var(--transition-duration) ease,
+              transform var(--transition-duration) ease;
 }
 
 /* Apply theme customizations */
@@ -125,12 +167,17 @@
   border-color: var(--theme-primary) !important;
 }
 
-/* Smooth transitions for all theme changes */
-* {
-  transition: background-color var(--transition-duration) ease,
-              color var(--transition-duration) ease,
-              border-color var(--transition-duration) ease,
-              box-shadow var(--transition-duration) ease;
+/* Enhanced Focus States */
+:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px hsl(var(--ring) / 0.1);
+}
+
+.dark :focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px hsl(var(--ring) / 0.2);
 }
 
 /* Accessibility styles */
@@ -214,12 +261,6 @@ html[data-letter-spacing="wider"] {
   & p, & li, & label, & div {
     letter-spacing: 0.05em !important;
   }
-}
-
-/* Focus ring for keyboard users */
-*:focus-visible {
-  outline: var(--focus-ring-width) solid hsl(var(--focus-ring)) !important;
-  outline-offset: 2px;
 }
 
 /* Skip to content link */
