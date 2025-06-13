@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { API_KEYS } from "@/config/api-keys"
+import { toast } from "@/components/ui/use-toast"
 
 interface UVData {
   index: number
@@ -17,6 +18,7 @@ interface UVData {
   protection: string[]
   location: string
   lastUpdated: string
+  source: string
 }
 
 interface PollutionData {
@@ -49,6 +51,64 @@ const pollutionLevels = {
   "very-unhealthy": { color: "bg-purple-500", text: "Very Unhealthy", max: 300 },
   "hazardous": { color: "bg-slate-800", text: "Hazardous", max: 500 },
 }
+
+// Add this function after the interfaces and before the component
+const validateApiKey = (key: string): boolean => {
+  if (!key || key === 'your_openuv_key_here') {
+    console.error('Invalid OpenUV API key');
+    return false;
+  }
+  return true;
+};
+
+// Add this function after the interfaces
+const getUVFromOpenWeather = async (lat: number, lon: number): Promise<number> => {
+  try {
+    const response = await fetch(
+      `${API_KEYS.ENDPOINTS.OPENWEATHER}/uvi?lat=${lat}&lon=${lon}&appid=${API_KEYS.OPENWEATHER_API_KEY}`
+    );
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch UV data from OpenWeather');
+    }
+    
+    const data = await response.json();
+    return data.value; // OpenWeather returns UV index directly
+  } catch (error) {
+    console.error('Error fetching UV from OpenWeather:', error);
+    throw error;
+  }
+};
+
+// Add these utility functions at the top of the file, after imports
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+
+const getCachedData = (key: string) => {
+  try {
+    const cached = localStorage.getItem(key);
+    if (cached) {
+      const { data, timestamp } = JSON.parse(cached);
+      if (Date.now() - timestamp < CACHE_DURATION) {
+        return data;
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error('Error reading cache:', error);
+    return null;
+  }
+};
+
+const setCachedData = (key: string, data: any) => {
+  try {
+    localStorage.setItem(key, JSON.stringify({
+      data,
+      timestamp: Date.now()
+    }));
+  } catch (error) {
+    console.error('Error writing to cache:', error);
+  }
+};
 
 export function UVIndexTracker() {
   // Debug log to check if API keys are loaded
@@ -164,42 +224,77 @@ export function UVIndexTracker() {
   }
 
   const getUVData = async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
       // Get user's location
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject)
-      })
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          timeout: 10000,
+          maximumAge: 5 * 60 * 1000 // 5 minutes
+        });
+      });
       
-      const { latitude, longitude } = position.coords
+      const { latitude, longitude } = position.coords;
+      const cacheKey = `uv_data_${latitude}_${longitude}`;
+      
+      // Check cache first
+      const cachedData = getCachedData(cacheKey);
+      if (cachedData) {
+        console.log('Using cached UV data');
+        setUVData(cachedData);
+        setIsLoading(false);
+        return;
+      }
       
       // Fetch location name using reverse geocoding
       const geocodingResponse = await fetch(
         `https://api.openweathermap.org/geo/1.0/reverse?lat=${latitude}&lon=${longitude}&limit=1&appid=${API_KEYS.OPENWEATHER_API_KEY}`
-      )
-      const geocodingData = await geocodingResponse.json()
-      const locationName = geocodingData[0]?.name || 'Your Location'
+      );
+      const geocodingData = await geocodingResponse.json();
+      const locationName = geocodingData[0]?.name || 'Your Location';
       
-      // Fetch actual UV index from OpenUV API
-      const response = await fetch(
-        `https://api.openuv.io/api/v1/uv?lat=${latitude}&lng=${longitude}`,
-        {
-          headers: {
-            'x-access-token': API_KEYS.OPENUV_API_KEY
+      let uvIndex: number;
+      let source = 'OpenUV';
+      
+      try {
+        // Try OpenUV first
+        console.log('Attempting to fetch from OpenUV API...');
+        const response = await fetch(
+          `${API_KEYS.ENDPOINTS.OPENUV}/uv?lat=${latitude}&lng=${longitude}`,
+          {
+            headers: {
+              'x-access-token': API_KEYS.OPENUV_API_KEY,
+              'Content-Type': 'application/json'
+            }
           }
+        );
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => null);
+          console.error('OpenUV API Error:', {
+            status: response.status,
+            statusText: response.statusText,
+            error: errorData
+          });
+          throw new Error(`OpenUV API failed: ${response.statusText}`);
         }
-      )
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch UV data')
+        
+        const data = await response.json();
+        if (!data.result || typeof data.result.uv === 'undefined') {
+          throw new Error('Invalid UV data received from OpenUV API');
+        }
+        
+        uvIndex = Math.round(data.result.uv);
+        console.log('Successfully fetched UV data from OpenUV:', uvIndex);
+      } catch (openUVError) {
+        console.log('Falling back to OpenWeather UV data due to:', openUVError);
+        source = 'OpenWeather';
+        uvIndex = await getUVFromOpenWeather(latitude, longitude);
+        console.log('Successfully fetched UV data from OpenWeather:', uvIndex);
       }
       
-      const data = await response.json()
-      const uvIndex = Math.round(data.result.uv) // Current UV index
-      const risk = determineUVRisk(uvIndex)
-      
-      // Get protection recommendations based on UV level
-      const protectionRecs = getProtectionRecommendations(risk)
+      const risk = determineUVRisk(uvIndex);
+      const protectionRecs = getProtectionRecommendations(risk);
       
       const newUVData: UVData = {
         index: uvIndex,
@@ -207,12 +302,21 @@ export function UVIndexTracker() {
         protection: protectionRecs,
         location: locationName,
         lastUpdated: new Date().toLocaleString(),
-      }
+        source: source
+      };
 
-      setUVData(newUVData)
+      // Cache the new data
+      setCachedData(cacheKey, newUVData);
+      setUVData(newUVData);
+      
+      toast({
+        title: "UV Data Updated",
+        description: `Current UV Index: ${uvIndex} (Data from ${source})`,
+        variant: "default",
+      });
     } catch (error) {
-      console.error("Error getting UV data:", error)
-      // Fallback to mock data if API fails
+      console.error("Error getting UV data:", error);
+      // Fallback to mock data if all APIs fail
       const mockUVData: UVData = {
         index: 5,
         risk: "moderate",
@@ -224,12 +328,19 @@ export function UVIndexTracker() {
         ],
         location: "Your Location",
         lastUpdated: new Date().toLocaleString() + " (Estimated)",
-      }
-      setUVData(mockUVData)
+        source: "Estimated"
+      };
+      setUVData(mockUVData);
+      
+      toast({
+        title: "UV Data Unavailable",
+        description: "Using estimated UV data. Please try again later.",
+        variant: "destructive",
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
   
   const getPollutionData = async () => {
     setIsLoading(true)
@@ -409,14 +520,19 @@ export function UVIndexTracker() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-2xl font-bold">UV Index {uvData.index}</span>
-                      <Badge
-                        className={cn(
-                          "px-2 py-1 rounded-full",
-                          uvRiskLevels[uvData.risk].color
-                        )}
-                      >
-                        {uvRiskLevels[uvData.risk].text} Risk
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          className={cn(
+                            "px-2 py-1 rounded-full",
+                            uvRiskLevels[uvData.risk].color
+                          )}
+                        >
+                          {uvRiskLevels[uvData.risk].text} Risk
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {uvData.source}
+                        </Badge>
+                      </div>
                     </div>
                     <Progress
                       value={(uvData.index / 11) * 100}
