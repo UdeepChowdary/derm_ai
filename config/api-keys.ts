@@ -21,7 +21,7 @@ export const API_KEYS = {
   
   // API Endpoints
   ENDPOINTS: {
-    AUTODERM: 'https://autoderm.ai/v1/query',
+    AUTODERM: 'https://3ffac3c3-29f5-593b-8179-73e8f7d133ca/v1/query',
     OPENUV: 'https://api.openuv.io/api/v1',
     OPENWEATHER: 'https://api.openweathermap.org/data/2.5',
     WAQI: 'https://api.waqi.info/feed'
