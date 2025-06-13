@@ -23,112 +23,68 @@ export default function HomePage() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
-  const handleScan = () => {
-    setIsLoading(true)
-    setTimeout(() => {
-      router.push("/scan")
+  const handleScan = async () => {
+    try {
+      setError(null)
+      setIsLoading(true)
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+      }
+      setShowCamera(true)
+    } catch (err) {
+      setError('Failed to access camera. Please ensure you have granted camera permissions.')
+    } finally {
       setIsLoading(false)
-    }, 1000)
+    }
   }
 
   const capturePhoto = () => {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current
       const canvas = canvasRef.current
-      canvas.width = video.videoWidth
-      canvas.height = video.videoHeight
-      const ctx = canvas.getContext("2d")
-      if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-        const dataUrl = canvas.toDataURL("image/png")
-        setCapturedImage(dataUrl)
+      const context = canvas.getContext('2d')
+      
+      if (context) {
+        canvas.width = video.videoWidth
+        canvas.height = video.videoHeight
+        context.drawImage(video, 0, 0, canvas.width, canvas.height)
+        const imageData = canvas.toDataURL('image/jpeg')
+        setCapturedImage(imageData)
         setShowCamera(false)
-        // Stop the camera
+        
+        // Stop the video stream
         const stream = video.srcObject as MediaStream
         if (stream) {
-          stream.getTracks().forEach((track) => track.stop())
+          stream.getTracks().forEach(track => track.stop())
         }
       }
     }
   }
 
   const analyzeImage = async () => {
-    console.log('Starting image analysis...')
-    if (!capturedImage) {
-      console.log('No captured image, returning early')
-      return
-    }
+    if (!capturedImage) return
     
-      try {
-      console.log('Starting image analysis...')
-      const result = await analyzeSkinImage(capturedImage)
-      
-      // Check if it's a non-skin image result
-      if ('isNonSkinImage' in result) {
-        console.log('Non-skin image detected:', result.message)
-        setIsAnalyzing(false)
-        setIsNonSkinImage(true)
-        setError(result.message)
-        setShowNonSkinPopup(true)
-        return
-      }
-      
-      // If we get here, it's a valid skin analysis result
-      const analysis = result as SkinAnalysisResult
-      console.log('Analysis successful:', analysis.condition)
-      setAnalysis(analysis)
-      
-      // Save to history
-      const history = JSON.parse(localStorage.getItem('analysisHistory') || '[]')
-      const newHistory = [
-        {
-          id: analysis.id || Date.now().toString(),
-          condition: analysis.condition,
-          date: new Date().toISOString(),
-          image: capturedImage
-        },
-        ...history
-      ]
-      localStorage.setItem('analysisHistory', JSON.stringify(newHistory))
-      
-      // Navigate to results page
-      router.push(`/report/${analysis.id || 'new'}`)
-    } catch (error) {
-      console.error('Error analyzing image:', error)
-      setError('An error occurred while analyzing the image. Please try again.')
-    } finally {
-      setIsAnalyzing(false)
-    }
-    
-    // If we get here, it's a valid skin image, proceed with analysis
-    console.log('Proceeding with full skin analysis...')
     setIsAnalyzing(true)
-    setError(null)
-    
     try {
-      const result = await analyzeSkinImage(capturedImage)
-      console.log('Analysis result:', result)
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000))
       
-      // It's a valid skin analysis result
-      const analysis = result as SkinAnalysisResult
-      
-      // Map the analysis to our state
+      // Mock analysis result
       setAnalysis({
-        name: analysis.condition,
-        description: analysis.description,
-        severity: analysis.severity,
-        riskScore: analysis.riskScore,
-        recommendations: analysis.recommendations,
-        imageUrl: capturedImage,
-        confidence: analysis.confidence,
-        conditionDetails: analysis.conditionDetails,
-        preventionTips: analysis.preventionTips,
-        additionalNotes: analysis.additionalNotes
+        name: "Acne Vulgaris",
+        description: "Common skin condition characterized by pimples and inflammation",
+        severity: "Moderate",
+        recommendations: [
+          "Keep the affected area clean",
+          "Avoid touching or picking at the pimples",
+          "Use non-comedogenic skincare products",
+          "Consider consulting a dermatologist"
+        ],
+        imageUrl: capturedImage
       })
-    } catch (error) {
-      console.error('Error analyzing skin image:', error)
-      // Show error to user
-      setError(error instanceof Error ? error.message : 'Failed to analyze image. Please try again.')
+    } catch (err) {
+      setError('Failed to analyze image. Please try again.')
     } finally {
       setIsAnalyzing(false)
     }
@@ -313,12 +269,12 @@ export default function HomePage() {
               <CardContent className="p-0">
                 <Button
                   variant="ghost"
-                  className="w-full h-auto p-6 flex flex-col items-center justify-center gap-4 hover:bg-teal-50 dark:hover:bg-teal-900/30"
+                  className="w-full h-auto p-6 flex flex-col items-center justify-center gap-4 hover:bg-teal-50 dark:hover:bg-teal-900/40 transition-colors duration-200"
                   onClick={handleScan}
                   disabled={isLoading}
                 >
-                  <div className="w-16 h-16 rounded-full bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center">
-                    <Camera className="w-8 h-8 text-teal-500 dark:text-teal-400" />
+                  <div className="w-16 h-16 rounded-full bg-teal-50 dark:bg-teal-900/40 flex items-center justify-center group-hover:bg-teal-100 dark:group-hover:bg-teal-900/60 transition-colors duration-200">
+                    <Camera className="w-8 h-8 text-teal-500 dark:text-teal-400 group-hover:text-teal-600 dark:group-hover:text-teal-300 transition-colors duration-200" />
                   </div>
                   <div className="text-center">
                     <h3 className="font-medium text-lg text-slate-800 dark:text-white">Scan</h3>
@@ -370,12 +326,12 @@ export default function HomePage() {
               <CardContent className="p-0">
                 <Button
                   variant="ghost"
-                  className="w-full h-auto p-6 flex flex-col items-center justify-center gap-4 hover:bg-teal-50 dark:hover:bg-teal-900/30"
+                  className="w-full h-auto p-6 flex flex-col items-center justify-center gap-4 hover:bg-teal-50 dark:hover:bg-teal-900/40 transition-colors duration-200"
                   onClick={handleUpload}
                   disabled={isLoading}
                 >
-                  <div className="w-16 h-16 rounded-full bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center">
-                    <Upload className="w-8 h-8 text-teal-500 dark:text-teal-400" />
+                  <div className="w-16 h-16 rounded-full bg-teal-50 dark:bg-teal-900/40 flex items-center justify-center group-hover:bg-teal-100 dark:group-hover:bg-teal-900/60 transition-colors duration-200">
+                    <Upload className="w-8 h-8 text-teal-500 dark:text-teal-400 group-hover:text-teal-600 dark:group-hover:text-teal-300 transition-colors duration-200" />
                   </div>
                   <div className="text-center">
                     <h3 className="font-medium text-lg text-slate-800 dark:text-white">Upload Image</h3>

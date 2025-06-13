@@ -12,28 +12,18 @@
     --popover-foreground: 222.2 84% 4.9%;
     --primary: 199 100% 56%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 97.5%;
+    --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 97.5%;
+    --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 172 76% 39%;
-    --input: 172 76% 39%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
     --ring: 199 100% 56%;
     --radius: 0.5rem;
-
-    /* New accent colors */
-    --accent-1: 199 100% 56%;
-    --accent-2: 262 83% 58%;
-    --accent-3: 142 76% 36%;
-
-    /* Theme Customizer Variables */
-    --theme-contrast: 1;
-    --theme-saturation: 1.1;
-    --theme-primary: #0ea5e9;
   }
 
   .dark {
@@ -43,24 +33,19 @@
     --card-foreground: 210 40% 98%;
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 199 89% 48%;
+    --primary: 199 100% 56%;
     --primary-foreground: 222.2 47.4% 11.2%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
     --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 75.1%;
+    --muted-foreground: 215 20.2% 65.1%;
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 199 89% 48%;
-
-    /* New accent colors for dark theme */
-    --accent-1: 199 89% 48%;
-    --accent-2: 262 83% 48%;
-    --accent-3: 142 76% 36%;
+    --ring: 199 100% 56%;
   }
 
   html {
@@ -94,7 +79,7 @@
   }
 }
 
-/* Enhanced Card and Input Styles */
+/* Card and Input Styles */
 @layer components {
   .card {
     @apply shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] border border-[color:hsl(var(--border))] bg-white rounded-xl;
@@ -103,71 +88,48 @@
       hsl(var(--card)),
       hsl(var(--card-foreground) / 0.05)
     );
+    backdrop-filter: blur(8px);
   }
   
   .dark .card {
-    @apply shadow-[0_2px_8px_-2px_rgba(0,0,0,0.3)] border border-[color:hsl(var(--border))] rounded-xl;
+    @apply shadow-[0_2px_8px_-2px_rgba(0,0,0,0.3)] border-[color:hsl(var(--border))] bg-gray-900/50;
     background: linear-gradient(
       to bottom right,
       hsl(var(--card)),
       hsl(var(--card-foreground) / 0.1)
     );
+    backdrop-filter: blur(8px);
   }
   
   .input {
-    @apply shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)];
+    @apply shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] border-[color:hsl(var(--border))];
+    background: linear-gradient(
+      to bottom right,
+      hsl(var(--input)),
+      hsl(var(--input) / 0.8)
+    );
   }
   
   .dark .input {
-    @apply shadow-[0_2px_8px_-2px_rgba(0,0,0,0.3)];
+    @apply shadow-[0_2px_8px_-2px_rgba(0,0,0,0.3)] border-[color:hsl(var(--border))];
+    background: linear-gradient(
+      to bottom right,
+      hsl(var(--input)),
+      hsl(var(--input) / 0.8)
+    );
   }
   
   .bg-white {
     @apply shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)];
+    background: linear-gradient(
+      to bottom right,
+      hsl(var(--background)),
+      hsl(var(--background) / 0.95)
+    );
   }
 }
 
-/* Theme Customizer Styles */
-:root {
-  --transition-duration: 0.3s;
-}
-
-/* Enhanced Transitions */
-* {
-  transition: background-color var(--transition-duration) ease,
-              color var(--transition-duration) ease,
-              border-color var(--transition-duration) ease,
-              box-shadow var(--transition-duration) ease,
-              transform var(--transition-duration) ease;
-}
-
-/* Apply theme customizations */
-[data-theme] {
-  transition: background-color var(--transition-duration) ease,
-              color var(--transition-duration) ease,
-              border-color var(--transition-duration) ease;
-}
-
-/* Apply contrast and saturation */
-[data-theme] * {
-  filter: contrast(var(--theme-contrast)) saturate(var(--theme-saturation));
-  transition: filter var(--transition-duration) ease;
-}
-
-/* Apply primary color */
-[data-theme] .bg-primary {
-  background-color: var(--theme-primary) !important;
-}
-
-[data-theme] .text-primary {
-  color: var(--theme-primary) !important;
-}
-
-[data-theme] .border-primary {
-  border-color: var(--theme-primary) !important;
-}
-
-/* Enhanced Focus States */
+/* Focus States */
 :focus-visible {
   outline: 2px solid hsl(var(--ring));
   outline-offset: 2px;
@@ -178,6 +140,21 @@
   outline: 2px solid hsl(var(--ring));
   outline-offset: 2px;
   box-shadow: 0 0 0 4px hsl(var(--ring) / 0.2);
+}
+
+/* Interactive Elements */
+@layer components {
+  .interactive-element {
+    @apply transition-all duration-200;
+  }
+  
+  .interactive-element:hover {
+    @apply shadow-[0_4px_12px_-2px_rgba(0,0,0,0.15)] transform translate-y-[-1px];
+  }
+  
+  .dark .interactive-element:hover {
+    @apply shadow-[0_4px_12px_-2px_rgba(0,0,0,0.35)];
+  }
 }
 
 /* Accessibility styles */
