@@ -51,14 +51,10 @@ const pollutionLevels = {
 }
 
 export function UVIndexTracker() {
-  // Debug log to check if API key is loaded
+  // Debug log to check if API keys are loaded
   React.useEffect(() => {
     console.log('OpenUV API Key:', API_KEYS.OPENUV_API_KEY);
     console.log('WAQI Token:', API_KEYS.WAQI_API_TOKEN);
-    console.log('Environment Variables:', {
-      NEXT_PUBLIC_OPENUV_API_KEY: process.env.NEXT_PUBLIC_OPENUV_API_KEY,
-      NODE_ENV: process.env.NODE_ENV
-    });
   }, []);
 
   const [uvData, setUVData] = React.useState<UVData | null>(null)

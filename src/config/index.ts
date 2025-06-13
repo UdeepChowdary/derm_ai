@@ -1,7 +1,7 @@
 // API Configuration
 export const API_CONFIG = {
   // Base URL for API requests
-  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api',
+  BASE_URL: 'http://localhost:3000/api',
   
   // API endpoints
   ENDPOINTS: {
@@ -51,16 +51,16 @@ export const APP_CONFIG = {
   VERSION: '1.0.0',
   
   // Environment
-  ENV: process.env.NODE_ENV || 'development',
+  ENV: 'development',
   
   // Is production environment
-  IS_PRODUCTION: process.env.NODE_ENV === 'production',
+  IS_PRODUCTION: false,
   
   // Is development environment
-  IS_DEVELOPMENT: process.env.NODE_ENV === 'development',
+  IS_DEVELOPMENT: true,
   
   // Is test environment
-  IS_TEST: process.env.NODE_ENV === 'test',
+  IS_TEST: false,
   
   // Default theme
   DEFAULT_THEME: 'system' as const,
@@ -121,30 +121,30 @@ export const FEATURE_FLAGS = {
   OFFLINE_MODE: false,
   
   // Enable/disable analytics
-  ANALYTICS_ENABLED: process.env.NEXT_PUBLIC_ANALYTICS_ENABLED === 'true',
+  ANALYTICS_ENABLED: false,
   
   // Enable/disable error tracking
-  ERROR_TRACKING_ENABLED: process.env.NEXT_PUBLIC_ERROR_TRACKING_ENABLED === 'true',
+  ERROR_TRACKING_ENABLED: false,
   
   // Enable/disable performance monitoring
-  PERFORMANCE_MONITORING_ENABLED: process.env.NEXT_PUBLIC_PERFORMANCE_MONITORING_ENABLED === 'true',
+  PERFORMANCE_MONITORING_ENABLED: false,
 } as const;
 
 // Analytics Configuration
 export const ANALYTICS_CONFIG = {
   // Google Analytics
-  GOOGLE_ANALYTICS_ID: process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID || '',
+  GOOGLE_ANALYTICS_ID: '',
   
   // Hotjar
-  HOTJAR_ID: process.env.NEXT_PUBLIC_HOTJAR_ID || '',
-  HOTJAR_SNIPPET_VERSION: process.env.NEXT_PUBLIC_HOTJAR_SNIPPET_VERSION || '6',
+  HOTJAR_ID: '',
+  HOTJAR_SNIPPET_VERSION: '6',
   
   // Sentry
-  SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN || '',
-  SENTRY_ENVIRONMENT: process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT || 'development',
+  SENTRY_DSN: '',
+  SENTRY_ENVIRONMENT: 'development',
   
   // LogRocket
-  LOGROCKET_APP_ID: process.env.NEXT_PUBLIC_LOGROCKET_APP_ID || '',
+  LOGROCKET_APP_ID: '',
 } as const;
 
 // Export all configs
