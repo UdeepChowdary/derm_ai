@@ -11,7 +11,7 @@ export const API_KEYS = {
   OPENUV_API_KEY: 'openuv-cvlzrmbrttjbw-io',
   
   // Autoderm API key for skin analysis
-  AUTODERM_API_KEY: '0e1607c3-cab4-7818-7b81-8d47a9b61d77',
+  AUTODERM_API_KEY: '6b6d2eb9-61d0-515c-b75e-b5121c9c0d32',
   
   // OpenWeatherMap API key for weather data
   OPENWEATHER_API_KEY: '9b535cc211e5131904e753822f4f45a7',

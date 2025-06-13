@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Hardcoded API key
-const apiKey = '0e1607c3-cab4-7818-7b81-8d47a9b61d77';
+const apiKey = '6b6d2eb9-61d0-515c-b75e-b5121c9c0d32';
 
 console.log('\n=== Testing API Configuration ===');
 console.log('API Key present:', apiKey ? '✅ Yes' : '❌ No');

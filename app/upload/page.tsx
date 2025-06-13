@@ -46,6 +46,7 @@ export default function UploadPage() {
   const [imageQuality, setImageQuality] = useState<ImageQualityResult | null>(null)
   const [showQualityAssessment, setShowQualityAssessment] = useState(false)
   const [showPhotoTips, setShowPhotoTips] = useState(false)
+  const [showNonSkinPopup, setShowNonSkinPopup] = useState(false)
 
   useEffect(() => {
     // Show photo tips to new users
@@ -165,11 +166,7 @@ export default function UploadPage() {
       console.log('Upload analysis result:', JSON.stringify(analysis, null, 2));
 
       if (isNonSkinImageResult(analysis)) {
-        toast({
-          title: 'Non-skin Image',
-          description: analysis.message,
-          variant: 'destructive',
-        })
+        setShowNonSkinPopup(true)
         setIsAnalyzing(false)
         return
       }
@@ -207,15 +204,21 @@ export default function UploadPage() {
       
       router.push(`/report/${reportData.id}`)
     } catch (error) {
-      console.error('Failed to analyze image:', error)
+      console.error('Error analyzing image:', error)
       toast({
         title: "Analysis Failed",
-        description: "We couldn't analyze your image. Please try again later.",
+        description: "An error occurred while analyzing the image. Please try again.",
         variant: "destructive",
       })
     } finally {
       setIsAnalyzing(false)
     }
+  }
+
+  const handleNonSkinPopupClose = () => {
+    setShowNonSkinPopup(false)
+    setSelectedImage(null)
+    router.push('/home')
   }
 
   return (
@@ -393,6 +396,31 @@ export default function UploadPage() {
           )}
         </div>
       </main>
+
+      {/* Non-skin Image Popup */}
+      {showNonSkinPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl">
+            <div className="text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/50 mb-4">
+                <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                Not a Skin Image
+              </h3>
+              <p className="text-slate-600 dark:text-slate-300 mb-6">
+                This image does not contain human skin and cannot be analyzed. Please upload a clear photo of a skin condition.
+              </p>
+              <Button
+                onClick={handleNonSkinPopupClose}
+                className="w-full bg-red-600 hover:bg-red-700 text-white"
+              >
+                OK, I understand
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
