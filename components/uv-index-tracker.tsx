@@ -524,7 +524,8 @@ export function UVIndexTracker() {
                         <Badge
                           className={cn(
                             "px-2 py-1 rounded-full text-white font-semibold shadow-md ring-2 ring-white/40 animate-pulse-glow",
-                            uvRiskLevels[uvData.risk].color
+                            uvRiskLevels[uvData.risk].color,
+                            uvData.risk === 'extreme' && "hover:bg-teal-600"
                           )}
                           style={{
                             boxShadow: `0 0 16px 4px ${uvRiskLevels[uvData.risk].color.includes('green') ? '#14B8A6' : uvRiskLevels[uvData.risk].color.includes('yellow') ? '#FACC15' : uvRiskLevels[uvData.risk].color.includes('orange') ? '#FB923C' : uvRiskLevels[uvData.risk].color.includes('red') ? '#EF4444' : '#A21CAF'}40` // 40 = 25% opacity
