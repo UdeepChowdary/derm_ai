@@ -3,7 +3,7 @@
 import React from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { ArrowLeft, Camera, X, InfoIcon, AlertTriangle } from "lucide-react"
+import { ArrowLeft, Camera, AlertTriangle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useRef } from "react"
 import { LoadingLogo } from "@/components/loading-logo"
@@ -21,9 +21,9 @@ export default function ScanPage() {
   const [showCamera, setShowCamera] = useState(true)
   const [capturedImage, setCapturedImage] = useState<string | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [showPhotoTips, setShowPhotoTips] = useState(false)
-  const [showNonSkinPopup, setShowNonSkinPopup] = useState(false)
   const [analysis, setAnalysis] = useState<any>(null)
+  const [showNonSkinPopup, setShowNonSkinPopup] = useState(false)
+  const [nonSkinMessage, setNonSkinMessage] = useState('')
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const detectorRef = useRef<faceLandmarksDetection.FaceLandmarksDetector | null>(null)
@@ -107,6 +107,7 @@ export default function ScanPage() {
       console.log('Analysis result:', JSON.stringify(result, null, 2));
 
       if (isNonSkinImageResult(result)) {
+        setNonSkinMessage(result.message)
         setShowNonSkinPopup(true)
         setIsAnalyzing(false)
         return
@@ -155,6 +156,12 @@ export default function ScanPage() {
     } finally {
       setIsAnalyzing(false)
     }
+  }
+
+  const handleNonSkinPopupClose = () => {
+    setShowNonSkinPopup(false)
+    setCapturedImage(null)
+    router.push('/home')
   }
 
   // Helper: crop the image to the detected face bounding box (returns original if detection fails)
@@ -208,12 +215,6 @@ export default function ScanPage() {
       console.warn('Face crop failed, using original image', err)
     }
     return dataUrl
-  }
-
-  const handleNonSkinPopupClose = () => {
-    setShowNonSkinPopup(false)
-    setCapturedImage(null)
-    router.push('/home')
   }
 
   return (
@@ -296,32 +297,32 @@ export default function ScanPage() {
             )}
           </CardContent>
         </Card>
+      </main>
 
-        {/* Non-skin Image Popup */}
-        {showNonSkinPopup && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl">
-              <div className="text-center">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/50 mb-4">
-                  <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
-                  Not a Skin Image
-                </h3>
-                <p className="text-slate-600 dark:text-slate-300 mb-6">
-                  This image does not contain human skin and cannot be analyzed. Please capture a clear photo of a skin condition.
-                </p>
-                <Button
-                  onClick={handleNonSkinPopupClose}
-                  className="w-full bg-red-600 hover:bg-red-700 text-white"
-                >
-                  OK, I understand
-                </Button>
+      {/* Non-skin Image Popup */}
+      {showNonSkinPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl">
+            <div className="text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/50 mb-4">
+                <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
               </div>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+                Not a Skin Image
+              </h3>
+              <p className="text-slate-600 dark:text-slate-300 mb-6">
+                {nonSkinMessage || 'This image does not contain human skin and cannot be analyzed. Please take a clear photo of a skin condition.'}
+              </p>
+              <Button
+                onClick={handleNonSkinPopupClose}
+                className="w-full bg-red-600 hover:bg-red-700 text-white"
+              >
+                OK, I understand
+              </Button>
             </div>
           </div>
-        )}
-      </main>
+        </div>
+      )}
     </div>
   )
 }

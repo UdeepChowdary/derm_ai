@@ -37,18 +37,18 @@ export type SkinAnalysisResult = {
   id: string
   condition: string
   description: string
-  severity: 'Mild' | 'Moderate' | 'Severe' | 'Critical'
+  severity: 'Low' | 'Moderate' | 'High'
   riskScore: number
+  confidence: number
   recommendations: string[]
-  confidence?: number
-  conditionDetails?: {
-    symptoms?: string[]
-    causes?: string[]
-    whenToSeeDoctor?: string
-    treatmentOptions?: string[]
+  conditionDetails: {
+    symptoms: string[]
+    causes: string[]
+    whenToSeeDoctor: string
+    treatmentOptions: string[]
   }
-  preventionTips?: string[]
-  additionalNotes?: string
+  preventionTips: string[]
+  additionalNotes: string
   warning?: string
 }
 
@@ -80,11 +80,11 @@ function generateUUID(): string {
   })
 }
 
-// API Configuration
-const API_KEY = API_KEYS.AUTODERM_API_KEY
-const API_URL = 'https://3ffac3c3-29f5-593b-8179-73e8f7d133ca/v1/query'
-const MODEL = 'autoderm_v2_2' // Using the latest model as per documentation
-const LANGUAGE = 'en' // Default language as per documentation
+// Constants
+const API_URL = process.env.NEXT_PUBLIC_AUTODERM_API_URL || 'https://autoderm.ai/v1/query';
+const API_KEY = process.env.AUTODERM_API_KEY;
+const MODEL = 'autoderm_v2_2';
+const LANGUAGE = 'en';
 
 // Mock data for development when API key is not available
 const mockAnalysisResults: SkinAnalysisResult[] = [
@@ -92,27 +92,27 @@ const mockAnalysisResults: SkinAnalysisResult[] = [
     id: generateUUID(),
     condition: "Acne Vulgaris",
     description: "Inflammatory skin condition characterized by pimples, blackheads, and whiteheads.",
-    severity: "Severe",
-    riskScore: 75,
-    confidence: 0.65,
+    severity: "Moderate",
+    riskScore: 65,
+    confidence: 0.85,
     recommendations: [
-      "Cleanse face twice daily with a gentle cleanser",
-      "Use non-comedogenic products",
-      "Consider over-the-counter treatments with benzoyl peroxide or salicylic acid"
+      "Keep the affected area clean",
+      "Avoid touching or picking at the pimples",
+      "Use non-comedogenic skincare products",
+      "Consider consulting a dermatologist"
     ],
     conditionDetails: {
-      symptoms: ["Pimples", "Blackheads", "Whiteheads", "Oily skin", "Redness"],
-      causes: ["Excess oil production", "Clogged hair follicles", "Bacteria", "Hormonal changes"],
-      whenToSeeDoctor: "If over-the-counter treatments don't improve condition within 4-6 weeks",
-      treatmentOptions: ["Topical retinoids", "Antibiotics", "Hormonal therapy", "Light therapy"]
+      symptoms: ["Pimples", "Blackheads", "Whiteheads", "Inflammation"],
+      causes: ["Hormonal changes", "Bacteria", "Excess oil production"],
+      whenToSeeDoctor: "If acne is severe or not responding to treatment",
+      treatmentOptions: ["Topical treatments", "Oral medications", "Lifestyle changes"]
     },
     preventionTips: [
-      "Wash your face twice daily and after sweating",
-      "Use oil-free, non-comedogenic products",
-      "Avoid touching your face frequently",
-      "Keep hair clean and off your face"
+      "Maintain good skin hygiene",
+      "Use non-comedogenic products",
+      "Avoid touching face frequently"
     ],
-    additionalNotes: "Acne is most common in teenagers but can occur at any age. Stress and diet may worsen symptoms for some individuals."
+    additionalNotes: "Common in teenagers and young adults"
   },
   {
     id: generateUUID(),
@@ -144,7 +144,7 @@ const mockAnalysisResults: SkinAnalysisResult[] = [
     id: generateUUID(),
     condition: "Psoriasis",
     description: "Autoimmune condition causing rapid buildup of skin cells, resulting in scaling and inflammation.",
-    severity: "Critical",
+    severity: "High",
     riskScore: 100,
     confidence: 0.88,
     recommendations: [
@@ -169,105 +169,65 @@ const mockAnalysisResults: SkinAnalysisResult[] = [
 ];
 
 // Helper function to map confidence score to severity
-function mapConfidenceToSeverity(confidence: number): SkinAnalysisResult['severity'] {
-  if (confidence >= 0.75) return 'Critical';
-  if (confidence >= 0.5) return 'Severe';
-  if (confidence >= 0.25) return 'Moderate';
-  return 'Mild';
+function mapConfidenceToSeverity(confidence: number): 'Low' | 'Moderate' | 'High' {
+  if (confidence >= 0.8) return 'High';
+  if (confidence >= 0.5) return 'Moderate';
+  return 'Low';
 }
 
 // Helper function to generate recommendations based on condition and severity
-function generateDefaultRecommendations(condition: string, severity: SkinAnalysisResult['severity']): string[] {
-  const recommendations: string[] = [];
-  
-  // Base recommendations based on severity
-  switch(severity) {
-    case 'Mild':
-      recommendations.push('Monitor the condition for any changes');
-      recommendations.push('Use gentle skincare products');
-      recommendations.push('Keep the area clean and moisturized');
-      break;
-    case 'Moderate':
-      recommendations.push('Consider over-the-counter treatments');
-      recommendations.push('Avoid known irritants');
-      recommendations.push('Schedule a follow-up if no improvement in 1-2 weeks');
-      break;
-    case 'Severe':
-    case 'Critical':
-      recommendations.push('Consult a dermatologist as soon as possible');
-      recommendations.push('Avoid scratching or irritating the affected area');
-      recommendations.push('Follow up with a healthcare provider for treatment options');
-      break;
-  }
-  
-  // Add condition-specific recommendations
-  if (condition.toLowerCase().includes('acne')) {
-    recommendations.push('Use non-comedogenic products');
-    recommendations.push('Avoid picking or squeezing lesions');
-  } else if (condition.toLowerCase().includes('eczema')) {
-    recommendations.push('Apply fragrance-free moisturizer regularly');
-    recommendations.push('Avoid hot showers and harsh soaps');
-  }
-  
-  return recommendations;
+function generateDefaultRecommendations(condition: string, severity: 'Low' | 'Moderate' | 'High'): string[] {
+  const baseRecommendations = [
+    'Keep the affected area clean and dry.',
+    'Avoid scratching or picking at the affected area.',
+    'Use gentle, fragrance-free skincare products.',
+  ];
+
+  const severityRecommendations = {
+    Low: [
+      'Monitor the condition for any changes.',
+      'Consider using over-the-counter treatments as directed.',
+    ],
+    Moderate: [
+      'Schedule a follow-up with a healthcare provider.',
+      'Document any changes in the condition.',
+      'Consider prescription treatments if recommended.',
+    ],
+    High: [
+      'Seek immediate medical attention if symptoms worsen.',
+      'Follow prescribed treatment plan strictly.',
+      'Keep detailed records of symptoms and treatment response.',
+    ],
+  };
+
+  return [...baseRecommendations, ...severityRecommendations[severity]];
 }
 
 // Helper function to generate prevention tips based on condition
 function generatePreventionTips(condition: string): string[] {
-  const tips: string[] = [];
-  
-  // General skin care tips
-  tips.push('Use broad-spectrum sunscreen with SPF 30+ daily');
-  tips.push('Keep your skin well-moisturized');
-  tips.push('Stay hydrated by drinking plenty of water');
-  
-  // Condition-specific prevention tips
-  if (condition.toLowerCase().includes('acne')) {
-    tips.push('Wash your face twice daily with a gentle cleanser');
-    tips.push('Avoid touching your face with unwashed hands');
-    tips.push('Clean items that touch your face (phones, pillowcases, etc.) regularly');
-  } else if (condition.toLowerCase().includes('eczema')) {
-    tips.push('Identify and avoid triggers that cause flare-ups');
-    tips.push('Use a humidifier in dry environments');
-    tips.push('Wear soft, breathable fabrics like cotton');
-  } else if (condition.toLowerCase().includes('psoriasis')) {
-    tips.push('Manage stress through relaxation techniques');
-    tips.push('Avoid smoking and limit alcohol consumption');
-    tips.push('Get regular, moderate sunlight exposure');
-  }
-  
-  return tips;
+  return [
+    'Maintain good skin hygiene.',
+    'Use sunscreen with SPF 30 or higher daily.',
+    'Stay hydrated and maintain a healthy diet.',
+    'Avoid known triggers or irritants.',
+    'Regular skin self-examinations.',
+  ];
 }
 
 // Helper function to determine when to see a doctor based on confidence
 function getWhenToSeeDoctor(confidence: number): string {
-  if (confidence >= 0.7) {
-    return 'As soon as possible, preferably within 1-2 days';
-  } else if (confidence >= 0.4) {
-    return 'Within 1-2 weeks if condition persists or worsens';
-  } else {
-    return 'If condition worsens or does not improve with basic care';
+  if (confidence >= 0.8) {
+    return 'Seek medical attention immediately if symptoms worsen or persist.';
   }
+  if (confidence >= 0.5) {
+    return 'Schedule an appointment with a dermatologist for proper evaluation.';
+  }
+  return 'Monitor the condition and consult a healthcare provider if symptoms persist.';
 }
 
-// Helper function to calculate risk score based on severity
-function calculateRiskScore(severity: string): number {
-  const severityMap: Record<string, number> = {
-    'Mild': 25,
-    'Moderate': 50,
-    'Severe': 75,
-    'Critical': 100
-  };
-  
-  return severityMap[severity] || 50;
-}
-
-// Helper function to get risk score directly from confidence
+// Helper function to calculate risk score based on confidence
 function getRiskScoreFromConfidence(confidence: number): number {
-  if (confidence >= 0.75) return 100;    // Critical
-  if (confidence >= 0.5) return 75;      // Severe
-  if (confidence >= 0.25) return 50;     // Moderate
-  return 25;                             // Mild
+  return Math.round(confidence * 100);
 }
 
 // Special type for non-skin image results
@@ -278,7 +238,7 @@ type NonSkinImageResult = {
 
 type SkinDetectionWarning = {
   isNonSkinImage: false;
-  message: string;
+  warning: string;
 };
 
 // Union type for all possible analysis results
@@ -292,14 +252,22 @@ declare global {
 
 // Initialize face detection model
 async function loadFaceDetector() {
-  if (faceDetector) return true;
-  if (modelLoadAttempted) return false; // Don't try to load multiple times
+  if (faceDetector) {
+    console.log('Face detector already loaded');
+    return true;
+  }
+  if (modelLoadAttempted) {
+    console.log('Face detector load already attempted, skipping');
+    return false;
+  }
   
   modelLoadAttempted = true;
+  console.log('Attempting to load face detection model...');
   
   try {
     // Set TensorFlow.js backend (WebGL for GPU acceleration)
     await tf.setBackend('webgl');
+    console.log('TensorFlow.js backend set to WebGL');
     
     // Load the face landmarks model
     const model = faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh;
@@ -309,6 +277,7 @@ async function loadFaceDetector() {
       refineLandmarks: false
     };
     
+    console.log('Creating face detector with config:', detectorConfig);
     faceDetector = await faceLandmarksDetection.createDetector(
       model,
       detectorConfig
@@ -317,20 +286,99 @@ async function loadFaceDetector() {
     console.log('Face detection model loaded successfully');
     return true;
   } catch (err) {
-    console.error('Failed to load face detection model, falling back to color detection:', err);
+    console.error('Failed to load face detection model:', err);
     return false;
   }
 }
 
+// Enhanced texture analysis for human skin detection
+function analyzeTexture(imageData: ImageData): number {
+  const data = imageData.data;
+  let textureScore = 0;
+  let sampleCount = 0;
+  let patternConsistency = 0;
+  let edgeCount = 0;
+  
+  // Sample pixels in a grid pattern
+  for (let y = 0; y < imageData.height; y += 10) {
+    for (let x = 0; x < imageData.width; x += 10) {
+      const idx = (y * imageData.width + x) * 4;
+      
+      // Skip transparent pixels
+      if (data[idx + 3] === 0) continue;
+      
+      // Calculate local variance and edge detection
+      let localVariance = 0;
+      let neighborCount = 0;
+      let localEdges = 0;
+      
+      // Check 8 surrounding pixels
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          
+          const nx = x + dx;
+          const ny = y + dy;
+          
+          if (nx >= 0 && nx < imageData.width && ny >= 0 && ny < imageData.height) {
+            const nidx = (ny * imageData.width + nx) * 4;
+            
+            // Skip transparent pixels
+            if (data[nidx + 3] === 0) continue;
+            
+            // Calculate color difference
+            const diff = Math.abs(data[idx] - data[nidx]) +
+                        Math.abs(data[idx + 1] - data[nidx + 1]) +
+                        Math.abs(data[idx + 2] - data[nidx + 2]);
+            
+            localVariance += diff;
+            neighborCount++;
+
+            // Edge detection
+            if (diff > 50) { // Threshold for edge detection
+              localEdges++;
+            }
+          }
+        }
+      }
+      
+      if (neighborCount > 0) {
+        textureScore += localVariance / neighborCount;
+        edgeCount += localEdges;
+        sampleCount++;
+      }
+    }
+  }
+  
+  // Calculate pattern consistency
+  const edgeDensity = edgeCount / sampleCount;
+  const textureVariance = textureScore / sampleCount / 255;
+  
+  // Human skin typically has:
+  // 1. Moderate edge density (not too high like fur, not too low like smooth surfaces)
+  // 2. Consistent texture variance
+  // 3. No repeating patterns like fur or scales
+  const isHumanSkinPattern = 
+    edgeDensity > 0.1 && edgeDensity < 0.4 && // Edge density range for human skin
+    textureVariance > 0.1 && textureVariance < 0.3; // Texture variance range for human skin
+  
+  return isHumanSkinPattern ? 1.0 : 0.0;
+}
+
 // Helper function to detect if an image contains animal-like features
 async function containsAnimalFeatures(imageData: string): Promise<boolean> {
+  console.log('Starting animal feature detection...');
   return new Promise((resolve) => {
     const img = new Image();
     
     img.onload = () => {
+      console.log('Image loaded for animal detection, dimensions:', img.width, 'x', img.height);
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      if (!ctx) return resolve(false);
+      if (!ctx) {
+        console.error('Failed to create canvas context for animal detection');
+        return resolve(false);
+      }
 
       canvas.width = img.width;
       canvas.height = img.height;
@@ -345,6 +393,7 @@ async function containsAnimalFeatures(imageData: string): Promise<boolean> {
         let brownGrayDominance = 0;
         let totalPixels = 0;
         
+        console.log('Analyzing pixel colors for animal features...');
         for (let i = 0; i < data.length; i += 4) {
           const r = data[i];
           const g = data[i + 1];
@@ -369,10 +418,15 @@ async function containsAnimalFeatures(imageData: string): Promise<boolean> {
         const greenPercent = (greenDominance / totalPixels) * 100;
         const brownGrayPercent = (brownGrayDominance / totalPixels) * 100;
         
-        console.log(`Animal detection - Green: ${greenPercent.toFixed(1)}%, Brown/Gray: ${brownGrayPercent.toFixed(1)}%`);
+        console.log('Animal detection results:', {
+          greenPercent: greenPercent.toFixed(1) + '%',
+          brownGrayPercent: brownGrayPercent.toFixed(1) + '%',
+          totalPixels
+        });
         
         // If either green or brown/gray dominates, it might be an animal
         const isLikelyAnimal = greenPercent > 30 || brownGrayPercent > 60;
+        console.log('Animal detection conclusion:', isLikelyAnimal ? 'Likely animal' : 'Not likely animal');
         return resolve(isLikelyAnimal);
         
       } catch (error) {
@@ -381,17 +435,21 @@ async function containsAnimalFeatures(imageData: string): Promise<boolean> {
       }
     };
     
-    img.onerror = () => resolve(false);
+    img.onerror = (error) => {
+      console.error('Error loading image for animal detection:', error);
+      resolve(false);
+    };
     img.src = imageData;
   });
 }
 
+// Enhanced skin detection function
 async function isHumanSkinImage(imageData: string): Promise<boolean> {
   try {
     // Check if running in browser environment
     if (typeof window === 'undefined' || !window.document) {
       console.warn('Not in browser environment, using basic skin detection');
-      return false; // Default to false in non-browser environments
+      return false;
     }
     
     // Load face detector if not already loaded
@@ -409,7 +467,7 @@ async function isHumanSkinImage(imageData: string): Promise<boolean> {
       img.src = imageData;
     });
 
-    // Check image dimensions (too small images might not be reliable)
+    // Check image dimensions
     if (img.width < 100 || img.height < 100) {
       console.warn('Image too small for reliable analysis');
       return false;
@@ -516,18 +574,17 @@ async function isHumanSkinImage(imageData: string): Promise<boolean> {
   }
 }
 
-// Enhanced skin detection with improved human/animal differentiation
+// Enhanced basic skin detection with improved human/animal differentiation
 async function basicSkinDetection(imageData: string): Promise<boolean> {
   return new Promise((resolve) => {
     // Check if running in browser environment
     if (typeof document === 'undefined') {
       console.warn('Not in browser environment, cannot perform skin detection');
-      return resolve(false); // Default to false in non-browser environments
+      return resolve(false);
     }
 
     const img = new Image();
     
-    // Set up error handling for image loading
     img.onerror = () => {
       console.error('Error loading image for skin detection');
       return resolve(false);
@@ -541,12 +598,8 @@ async function basicSkinDetection(imageData: string): Promise<boolean> {
         return resolve(false);
       }
 
-      // Set canvas dimensions with aspect ratio and max dimension
-      const maxDimension = 800;
-      let width = img.width;
-      let height = img.height;
-      
-      // Check for minimum dimensions
+      canvas.width = img.width;
+      canvas.height = img.height;
       
       try {
         // Draw image on canvas
@@ -589,13 +642,12 @@ async function basicSkinDetection(imageData: string): Promise<boolean> {
         
         // Edge Detection Pass (for fur/feather detection)
         let edgePixels = 0;
-        const edgeThreshold = 30; // Threshold for edge detection
+        const edgeThreshold = 30;
         
-        // Simple Sobel edge detection (simplified for performance)
+        // Simple Sobel edge detection
         const sobelX = [-1, 0, 1, -2, 0, 2, -1, 0, 1];
         const sobelY = [-1, -2, -1, 0, 0, 0, 1, 2, 1];
         
-        // Sample points for edge detection (check every 4th pixel for performance)
         const sampleStep = 4;
         const width = canvas.width;
         const height = canvas.height;
@@ -604,7 +656,6 @@ async function basicSkinDetection(imageData: string): Promise<boolean> {
           for (let x = 1; x < width - 1; x += sampleStep) {
             const idx = (y * width + x) * 4;
             
-            // Get 3x3 neighborhood
             let gx = 0, gy = 0;
             for (let ky = -1, ki = 0; ky <= 1; ky++) {
               for (let kx = -1; kx <= 1; kx++, ki++) {
@@ -615,7 +666,6 @@ async function basicSkinDetection(imageData: string): Promise<boolean> {
               }
             }
             
-            // Calculate gradient magnitude
             const gradient = Math.sqrt(gx * gx + gy * gy);
             if (gradient > edgeThreshold) {
               edgePixels++;
@@ -623,11 +673,10 @@ async function basicSkinDetection(imageData: string): Promise<boolean> {
           }
         }
         
-        // Calculate edge density (edges per pixel sampled)
         const edgeDensity = edgePixels / ((width * height) / (sampleStep * sampleStep));
         console.log(`Edge density: ${(edgeDensity * 100).toFixed(1)}%`);
         
-        // Adapt edge density threshold based on skin color presence
+        // Preliminary skin color check
         let preliminarySkinPixels = 0;
         for (let i = 0; i < data.length; i += 4) {
           const r = data[i];
@@ -644,28 +693,23 @@ async function basicSkinDetection(imageData: string): Promise<boolean> {
         const preliminarySkinPercentage = (preliminarySkinPixels / (data.length / 4)) * 100;
         console.log(`Preliminary skin color percentage: ${preliminarySkinPercentage.toFixed(1)}%`);
 
-        // If there's a good amount of skin color, be more tolerant of high edge density.
-        // Diseased skin can be both textured (high edge) and have skin tones.
-        // Raise the adaptive edge threshold to better accommodate normal facial texture
-        // while still filtering out highly textured animal fur/feathers.
+        // Adaptive edge threshold based on skin color presence
         const adaptiveEdgeThreshold = preliminarySkinPercentage > 5 ? 0.40 : 0.25;
         console.log(`Adaptive edge threshold: ${(adaptiveEdgeThreshold * 100).toFixed(1)}%`);
 
-        // If there is a very high proportion of skin-colored pixels, allow higher texture (edge density)
-        // Diseased or inflamed skin (e.g., eczema, psoriasis) often has flaking/cracks that increase edge count.
-        // Accept images with >50% skin color as long as edge density is not extreme (>65%).
+        // Early acceptance for high skin color percentage
         if (preliminarySkinPercentage > 50 && edgeDensity <= 0.65) {
           console.log('High skin color percentage and acceptable edge density; accepting despite texture.');
           return resolve(true);
         }
 
-        // If edge density is too high, likely fur/feathers
+        // Reject if edge density is too high (likely fur/feathers)
         if (edgeDensity > adaptiveEdgeThreshold) {
           console.log(`High edge density detected (${(edgeDensity * 100).toFixed(1)}% > ${(adaptiveEdgeThreshold * 100).toFixed(1)}%), likely animal fur/feathers`);
           return resolve(false);
         }
         
-        // Calculate dynamic thresholds based on image content
+        // Calculate dynamic thresholds
         const lumRange = maxLum - minLum;
         const lumThreshold = minLum + (lumRange * 0.2);
         const highlightThreshold = minLum + (lumRange * 0.8);
@@ -677,7 +721,7 @@ async function basicSkinDetection(imageData: string): Promise<boolean> {
         let previousLum = lums[0] || 0;
         const totalPixels = canvas.width * canvas.height;
         
-        // Second pass: Detect skin and analyze texture
+        // Second pass: Enhanced skin detection
         for (let i = 0; i < data.length; i += 4) {
           const r = data[i];
           const g = data[i + 1];
@@ -688,7 +732,6 @@ async function basicSkinDetection(imageData: string): Promise<boolean> {
           
           const lum = lums[i >> 2];
           
-          // Skip extreme dark/light pixels
           if (lum < lumThreshold || lum > highlightThreshold) continue;
           
           // Convert to YCbCr color space
@@ -696,20 +739,20 @@ async function basicSkinDetection(imageData: string): Promise<boolean> {
           const cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b;
           const cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
           
-          // Relaxed skin color bounds to improve recognition under varied lighting
+          // Dynamic color bounds based on brightness
           const cbMin = 80 + (1 - brightnessFactor) * 10;
           const cbMax = 140 + (1 - brightnessFactor) * 10;
           const crMin = 125 - (1 - brightnessFactor) * 10;
           const crMax = 180 + (1 - brightnessFactor) * 10;
           
-          // Enhanced skin detection with stricter color ratios
+          // Enhanced skin detection with strict color ratios
           const isSkin = (y > 80 && y < 240) &&
                         (cb > cbMin && cb < cbMax) &&
                         (cr > crMin && cr < crMax) &&
                         (r > 70 && g > 45 && b > 25) &&
                         (r > g && r > b) &&
                         (Math.abs(r - g) > 15) &&
-                        (r / (g + 1) > 1.05) && // Red should be dominant but not too much
+                        (r / (g + 1) > 1.05) &&
                         (r / (g + 1) < 2.5) &&
                         (r / (b + 1) > 1.1) &&
                         (r / (b + 1) < 3.0);
@@ -717,9 +760,9 @@ async function basicSkinDetection(imageData: string): Promise<boolean> {
           if (isSkin) {
             skinPixels++;
             
-            // Simple texture analysis - detect rapid luminance changes (fur)
+            // Texture analysis
             const lumChange = Math.abs(lum - previousLum);
-            if (lumChange > 15) { // Threshold for texture detection
+            if (lumChange > 15) {
               textureVariance++;
             }
           }
@@ -727,28 +770,26 @@ async function basicSkinDetection(imageData: string): Promise<boolean> {
           previousLum = lum;
         }
         
-        // Early acceptance: if preliminary skin percentage is already high (>20%)
-        // and edge density is within threshold, skip stricter checks.
+        // Early acceptance for high preliminary skin percentage
         if (preliminarySkinPercentage > 20 && edgeDensity < adaptiveEdgeThreshold) {
           console.log('High preliminary skin percentage with acceptable texture — accepting image as human skin.');
           return resolve(true);
         }
         
-        // Calculate metrics
+        // Calculate final metrics
         const skinPercentage = (skinPixels / totalPixels) * 100;
         const textureScore = (textureVariance / skinPixels) * 100 || 0;
         
         console.log(`Skin detection: ${skinPercentage.toFixed(1)}% skin-like pixels`);
         console.log(`Texture variance: ${textureScore.toFixed(1)}%`);
         
-        // Adaptive thresholds
+        // Adaptive thresholds based on image characteristics
         const isCloseUp = totalPixels < 300000;
-        let minSkinThreshold = isCloseUp ? 3 : 8; // Much lower threshold for close-up webcam images
-        const maxTextureScore = isCloseUp ? 25 : 40; // Higher tolerance for full body
+        let minSkinThreshold = isCloseUp ? 3 : 8;
+        const maxTextureScore = isCloseUp ? 25 : 40;
         
-        // Adjust thresholds based on overall image characteristics
+        // Adjust for green-tinted images
         if (avgG > avgR * 1.1) {
-          // Green-tinted images are more likely to be nature/animal
           minSkinThreshold += 5;
         }
         
@@ -771,6 +812,8 @@ async function basicSkinDetection(imageData: string): Promise<boolean> {
 
 // Main function to analyze skin images
 export async function analyzeSkinImage(imageData: string): Promise<AnalysisResult> {
+  console.log('Starting skin image analysis...');
+  
   // If no API key is provided, return mock data
   if (!API_KEYS.AUTODERM_API_KEY) {
     console.warn('No API key provided');
@@ -783,12 +826,14 @@ export async function analyzeSkinImage(imageData: string): Promise<AnalysisResul
   let warningMessage: string | undefined;
 
   try {
-    console.log('Starting image analysis...');
+    console.log('Performing initial skin verification...');
     
     // First, perform a comprehensive check for human skin
     const isHumanSkin = await isHumanSkinImage(imageData);
+    console.log('Initial skin verification result:', isHumanSkin);
+    
     if (!isHumanSkin) {
-      console.warn('Image is not human skin, rejecting analysis.');
+      console.warn('Image failed skin verification');
       return {
         isNonSkinImage: true,
         message: 'This image does not contain human skin and cannot be analyzed.'
@@ -798,20 +843,15 @@ export async function analyzeSkinImage(imageData: string): Promise<AnalysisResul
     // If it is human skin, then do a basic skin check without being too strict
     console.log('Running basic skin detection for warning purposes...');
     const basicSkinCheck = await basicSkinDetection(imageData);
+    console.log('Basic skin check result:', basicSkinCheck);
     
     if (!basicSkinCheck) {
-      console.warn('Basic skin check failed, but proceeding with analysis for warning.');
+      console.warn('Basic skin check failed, but proceeding with analysis for warning');
       warningMessage = 'The image quality may be poor or the skin may not be clearly visible. Analysis results may be less accurate.';
     }
     
-    console.log('Image appears to contain skin, proceeding with analysis');
-  } catch (error) {
-    console.error('Error during initial skin analysis, proceeding with caution:', error);
-    // Continue with analysis even if initial detection fails, but with a warning
-    warningMessage = 'An error occurred during initial skin detection. Analysis results may be less accurate.';
-  }
-
-  try {
+    console.log('Proceeding with API analysis...');
+    
     // Convert base64 to blob
     const parts = imageData.split(';');
     const mimeType = parts[0].split(':')[1];
@@ -835,6 +875,7 @@ export async function analyzeSkinImage(imageData: string): Promise<AnalysisResul
     params.append('simple_names', 'true');
     params.append('anon_filter', 'false');
 
+    console.log('Making API request...');
     // Make API request
     const response = await fetch(`${API_URL}?${params.toString()}`, {
       method: 'POST',
@@ -850,7 +891,7 @@ export async function analyzeSkinImage(imageData: string): Promise<AnalysisResul
       
       // If image is not of skin, return specific error
       if (response.status === 400 && errorText.includes('not of skin')) {
-        console.warn('Non-skin image detected');
+        console.warn('API reported non-skin image');
         return {
           isNonSkinImage: true,
           message: 'This image does not contain human skin and cannot be analyzed.'
@@ -859,7 +900,7 @@ export async function analyzeSkinImage(imageData: string): Promise<AnalysisResul
       
       // If API limit is reached, fall back to mock data
       if (response.status === 429 || (errorText && errorText.includes('API_LIMIT_REACHED'))) {
-        console.warn('API limit reached, falling back to mock data');
+        console.warn('API limit reached, using mock data');
         const mockResult = mockAnalysisResults[Math.floor(Math.random() * mockAnalysisResults.length)];
         return {
           ...mockResult,
@@ -869,7 +910,7 @@ export async function analyzeSkinImage(imageData: string): Promise<AnalysisResul
       }
       
       // For other API errors, return generic error
-      console.warn('API error, falling back to mock data');
+      console.warn('API error, using mock data');
       const mockResult = mockAnalysisResults[Math.floor(Math.random() * mockAnalysisResults.length)];
       return {
         ...mockResult,
@@ -884,7 +925,7 @@ export async function analyzeSkinImage(imageData: string): Promise<AnalysisResul
     if (!data.success) {
       // Handle non-skin image case
       if (data.message && (data.message.includes('not of skin') || data.message.includes('no skin'))) {
-        console.warn('Non-skin image detected:', data.message);
+        console.warn('API reported non-skin image:', data.message);
         return {
           isNonSkinImage: true,
           message: 'This image does not contain human skin and cannot be analyzed.'
@@ -901,6 +942,7 @@ export async function analyzeSkinImage(imageData: string): Promise<AnalysisResul
 
     // Get the top prediction
     const topPrediction = data.predictions[0];
+    console.log('Top prediction:', topPrediction);
 
     // Map the API response to our SkinAnalysisResult format
     const result: SkinAnalysisResult = {
@@ -925,10 +967,10 @@ export async function analyzeSkinImage(imageData: string): Promise<AnalysisResul
       warning: warningMessage,
     };
 
+    console.log('Analysis complete:', result);
     return result;
   } catch (error) {
     console.error('Error analyzing skin image:', error);
-    // Return error for any other failures
     return {
       isNonSkinImage: true,
       message: 'An error occurred while analyzing the image. Please try again.'

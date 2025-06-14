@@ -1,222 +1,33 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Camera, Upload, X, Loader2, AlertCircle } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Camera, Upload, AlertCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useState, useRef, useEffect } from "react"
+import { useState } from "react"
 import { BottomNavigation } from "@/components/bottom-navigation"
 import { InteractiveLogo } from "@/components/interactive-logo"
 import { PageTransition } from "@/components/page-transition"
-import { analyzeSkinImage, type AnalysisResult, type SkinAnalysisResult } from "@/lib/analyze-skin"
 
 export default function HomePage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
-  const [showCamera, setShowCamera] = useState(false)
-  const [capturedImage, setCapturedImage] = useState<string | null>(null)
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [isNonSkinImage, setIsNonSkinImage] = useState(false)
-  const [showNonSkinPopup, setShowNonSkinPopup] = useState(false)
-  const [analysis, setAnalysis] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
 
-  const handleScan = async () => {
-    try {
-      setError(null)
-      setIsLoading(true)
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true })
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-      }
-      setShowCamera(true)
-    } catch (err) {
-      setError('Failed to access camera. Please ensure you have granted camera permissions.')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const capturePhoto = () => {
-    if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current
-      const canvas = canvasRef.current
-      const context = canvas.getContext('2d')
-      
-      if (context) {
-        canvas.width = video.videoWidth
-        canvas.height = video.videoHeight
-        context.drawImage(video, 0, 0, canvas.width, canvas.height)
-        const imageData = canvas.toDataURL('image/jpeg')
-        setCapturedImage(imageData)
-        setShowCamera(false)
-        
-        // Stop the video stream
-        const stream = video.srcObject as MediaStream
-        if (stream) {
-          stream.getTracks().forEach(track => track.stop())
-        }
-      }
-    }
-  }
-
-  const analyzeImage = async () => {
-    if (!capturedImage) return
-    
-    setIsAnalyzing(true)
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      // Mock analysis result
-      setAnalysis({
-        name: "Acne Vulgaris",
-        description: "Common skin condition characterized by pimples and inflammation",
-        severity: "Moderate",
-        recommendations: [
-          "Keep the affected area clean",
-          "Avoid touching or picking at the pimples",
-          "Use non-comedogenic skincare products",
-          "Consider consulting a dermatologist"
-        ],
-        imageUrl: capturedImage
-      })
-    } catch (err) {
-      setError('Failed to analyze image. Please try again.')
-    } finally {
-      setIsAnalyzing(false)
-    }
-  }
-
-  const handleUpload = () => {
+  const handleScan = () => {
     setIsLoading(true)
-    
-    // Simulate file selection delay
     setTimeout(() => {
-      router.push("/upload")
+      router.push("/scan")
       setIsLoading(false)
     }, 1000)
   }
 
-  // Handle non-skin popup close
-  const handleNonSkinPopupClose = () => {
-    console.log('Closing non-skin popup')
-    setShowNonSkinPopup(false)
-    setCapturedImage(null)
-    setError(null)
-    setIsNonSkinImage(false)
-    setIsAnalyzing(false)
-    router.push('/')
-  }
-
-  // Add debug effect
-  useEffect(() => {
-    console.log('Popup state:', { showNonSkinPopup, isNonSkinImage, error });
-  }, [showNonSkinPopup, isNonSkinImage, error]);
-
-  // Show non-skin popup
-  if (showNonSkinPopup) {
-    console.log('Rendering non-skin popup');
-    return (
-      <div 
-        className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 p-4"
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <div className="bg-white dark:bg-slate-800 rounded-lg max-w-md w-full p-6 shadow-2xl transform transition-all">
-          <div className="text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/50 mb-4">
-              <AlertCircle className="h-8 w-8 text-amber-600 dark:text-amber-400" />
-            </div>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">
-              Not a Skin Image
-            </h3>
-            <div className="mt-2">
-              <p className="text-base text-slate-700 dark:text-slate-300">
-                This image does not contain human skin and cannot be analyzed.
-              </p>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-                Please upload a clear photo of a skin condition.
-              </p>
-            </div>
-            <div className="mt-6">
-              <button
-                type="button"
-                className="inline-flex justify-center rounded-md border border-transparent bg-amber-600 px-6 py-2.5 text-base font-medium text-white hover:bg-amber-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 transition-colors"
-                onClick={handleNonSkinPopupClose}
-              >
-                OK, I understand
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Show loading state when analyzing
-  if (isAnalyzing) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900 p-4">
-        <div className="w-full max-w-md p-6 bg-white dark:bg-slate-800 rounded-lg shadow-lg text-center">
-          <div className="flex flex-col items-center">
-            <div className={`rounded-full p-4 mb-4 ${
-              isNonSkinImage 
-                ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400'
-                : 'bg-teal-100 dark:bg-teal-900/50 text-teal-500 dark:text-teal-400'
-            }`}>
-              {isNonSkinImage ? (
-                <AlertCircle className="w-10 h-10 animate-pulse" />
-              ) : (
-                <Camera className="w-10 h-10 animate-pulse" />
-              )}
-            </div>
-            
-            <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-2">
-              {isNonSkinImage ? 'Not a Skin Image' : 'Analyzing Skin...'}
-            </h2>
-            
-            <p className={`text-lg mb-6 ${
-              isNonSkinImage 
-                ? 'text-amber-600 dark:text-amber-400 font-medium'
-                : 'text-slate-500 dark:text-slate-400'
-            }`}>
-              {isNonSkinImage 
-                ? 'This image is not a human skin image.'
-                : 'Please wait while we analyze your skin condition...'}
-            </p>
-            
-            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 mb-4">
-              <div 
-                className={`h-2.5 rounded-full ${
-                  isNonSkinImage ? 'bg-amber-500' : 'bg-teal-500'
-                }`}
-                style={{
-                  width: isNonSkinImage ? '100%' : '70%',
-                  animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
-                }}
-              ></div>
-            </div>
-            
-            {isNonSkinImage && (
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Redirecting you back to the home page...
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-    );
+  const handleUpload = () => {
+    setIsLoading(true)
+    setTimeout(() => {
+      router.push("/upload")
+      setIsLoading(false)
+    }, 1000)
   }
 
   return (
@@ -251,74 +62,32 @@ export default function HomePage() {
                   </div>
                   <div className="ml-3">
                     <h3 className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                      {error.includes('not of skin') ? 'Non-Skin Image' : 'Notice'}
+                      Notice
                     </h3>
                     <div className="mt-2 text-sm text-amber-700 dark:text-amber-300">
                       <p>{error}</p>
-                      {error.includes('not of skin') && (
-                        <p className="mt-2">
-                          Please take a clear photo of the skin condition you want to analyze.
-                        </p>
-                      )}
                     </div>
                   </div>
                 </div>
               </div>
             )}
+
             <Card className="overflow-hidden border-[color:hsl(var(--border))] dark:border-teal-900">
               <CardContent className="p-0">
                 <Button
                   variant="ghost"
-                  className="w-full h-auto p-6 flex flex-col items-center justify-center gap-4 hover:bg-teal-50 dark:hover:bg-teal-900/40 transition-colors duration-200"
+                  className="w-full h-auto p-6 flex flex-col items-center justify-center gap-4 hover:bg-teal-50 dark:hover:bg-teal-900/30"
                   onClick={handleScan}
                   disabled={isLoading}
                 >
-                  <div className="w-16 h-16 rounded-full bg-teal-50 dark:bg-teal-900/40 flex items-center justify-center group-hover:bg-teal-100 dark:group-hover:bg-teal-900/60 transition-colors duration-200">
-                    <Camera className="w-8 h-8 text-teal-500 dark:text-teal-400 group-hover:text-teal-600 dark:group-hover:text-teal-300 transition-colors duration-200" />
+                  <div className="w-16 h-16 rounded-full bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center">
+                    <Camera className="w-8 h-8 text-teal-500 dark:text-teal-400" />
                   </div>
                   <div className="text-center">
                     <h3 className="font-medium text-lg text-slate-800 dark:text-white">Scan</h3>
                     <p className="text-sm text-slate-500 dark:text-slate-400">Use camera to analyze skin</p>
                   </div>
                 </Button>
-                {showCamera && (
-                  <div className="flex flex-col items-center gap-4 mt-4">
-                    <video ref={videoRef} className="rounded-lg w-full max-w-xs" autoPlay playsInline />
-                    <Button onClick={capturePhoto} className="bg-[#14B8A6] text-white">Capture Photo</Button>
-                    <canvas ref={canvasRef} className="hidden" />
-                  </div>
-                )}
-                {capturedImage && (
-                  <div className="flex flex-col items-center gap-4 mt-4">
-                    <img src={capturedImage} alt="Captured" className="rounded-lg w-full max-w-xs" />
-                    <Button onClick={analyzeImage} className="bg-[#14B8A6] text-white" disabled={isAnalyzing}>
-                      {isAnalyzing ? "Analyzing..." : "Analyze Image"}
-                    </Button>
-                  </div>
-                )}
-                {analysis && (
-                  <div className="mt-6 w-full max-w-md mx-auto">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>{analysis.name}</CardTitle>
-                        <CardDescription>{analysis.description}</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="mb-2"><strong>Severity:</strong> {analysis.severity}</div>
-                        <div className="mb-2"><strong>Recommendations:</strong>
-                          <ul className="list-disc pl-5">
-                            {analysis.recommendations.map((rec: string, idx: number) => (
-                              <li key={idx}>{rec}</li>
-                            ))}
-                          </ul>
-                        </div>
-                        <div className="mt-4">
-                          <img src={analysis.imageUrl} alt="Analyzed" className="rounded-lg w-full max-w-xs" />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                )}
               </CardContent>
             </Card>
 
@@ -326,12 +95,12 @@ export default function HomePage() {
               <CardContent className="p-0">
                 <Button
                   variant="ghost"
-                  className="w-full h-auto p-6 flex flex-col items-center justify-center gap-4 hover:bg-teal-50 dark:hover:bg-teal-900/40 transition-colors duration-200"
+                  className="w-full h-auto p-6 flex flex-col items-center justify-center gap-4 hover:bg-teal-50 dark:hover:bg-teal-900/30"
                   onClick={handleUpload}
                   disabled={isLoading}
                 >
-                  <div className="w-16 h-16 rounded-full bg-teal-50 dark:bg-teal-900/40 flex items-center justify-center group-hover:bg-teal-100 dark:group-hover:bg-teal-900/60 transition-colors duration-200">
-                    <Upload className="w-8 h-8 text-teal-500 dark:text-teal-400 group-hover:text-teal-600 dark:group-hover:text-teal-300 transition-colors duration-200" />
+                  <div className="w-16 h-16 rounded-full bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center">
+                    <Upload className="w-8 h-8 text-teal-500 dark:text-teal-400" />
                   </div>
                   <div className="text-center">
                     <h3 className="font-medium text-lg text-slate-800 dark:text-white">Upload Image</h3>

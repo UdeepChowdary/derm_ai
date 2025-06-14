@@ -520,12 +520,13 @@ export function UVIndexTracker() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-2xl font-bold">UV Index {uvData.index}</span>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center space-x-2">
                         <Badge
                           className={cn(
                             "px-2 py-1 rounded-full text-white font-semibold shadow-md ring-2 ring-white/40 animate-pulse-glow",
                             uvRiskLevels[uvData.risk].color,
-                            uvData.risk === 'extreme' && "hover:bg-teal-600"
+                            "text-white",
+                            "hover:bg-[#14B8A6]"
                           )}
                           style={{
                             boxShadow: `0 0 16px 4px ${uvRiskLevels[uvData.risk].color.includes('green') ? '#14B8A6' : uvRiskLevels[uvData.risk].color.includes('yellow') ? '#FACC15' : uvRiskLevels[uvData.risk].color.includes('orange') ? '#FB923C' : uvRiskLevels[uvData.risk].color.includes('red') ? '#EF4444' : '#A21CAF'}40` // 40 = 25% opacity
@@ -533,21 +534,20 @@ export function UVIndexTracker() {
                         >
                           {uvRiskLevels[uvData.risk].text} Risk
                         </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          {uvData.source}
-                        </Badge>
                       </div>
                     </div>
-                    <Progress
-                      value={(uvData.index / 11) * 100}
-                      className="h-3 rounded-full bg-gradient-to-r from-green-200 via-yellow-200 via-50% via-orange-200 to-red-300 dark:from-green-900 dark:via-yellow-900 dark:to-red-900 shadow-md"
-                      indicatorClassName={cn("transition-all rounded-full shadow-lg", uvRiskLevels[uvData.risk].color)}
-                    />
-                    <div className="flex justify-between text-xs text-slate-500">
-                      <span>Low</span>
-                      <span>Moderate</span>
-                      <span>High</span>
-                      <span>Extreme</span>
+                    <div className="mt-4">
+                      <Progress
+                        value={(uvData.index / 11) * 100}
+                        className="h-3 rounded-full bg-gradient-to-r from-green-200 via-yellow-200 via-50% via-orange-200 to-red-300 dark:from-green-900 dark:via-yellow-900 dark:to-red-900 shadow-md"
+                        indicatorClassName={cn("transition-all rounded-full shadow-lg", uvRiskLevels[uvData.risk].color)}
+                      />
+                      <div className="flex justify-between text-xs text-slate-500">
+                        <span>Low</span>
+                        <span>Moderate</span>
+                        <span>High</span>
+                        <span>Extreme</span>
+                      </div>
                     </div>
                   </div>
 
@@ -598,22 +598,26 @@ export function UVIndexTracker() {
                       <Badge
                         className={cn(
                           "px-2 py-1",
-                          pollutionLevels[pollutionData.level].color
+                          pollutionLevels[pollutionData.level].color,
+                          "text-white",
+                          "hover:bg-[#14B8A6]"
                         )}
                       >
                         {pollutionLevels[pollutionData.level].text}
                       </Badge>
                     </div>
-                    <Progress
-                      value={(pollutionData.aqi / 500) * 100}
-                      className="h-3 rounded-full bg-gradient-to-r from-green-200 via-yellow-200 via-50% via-orange-200 to-red-300 dark:from-green-900 dark:via-yellow-900 dark:to-red-900 shadow-md"
-                      indicatorClassName={cn("transition-all rounded-full shadow-lg", pollutionLevels[pollutionData.level].color)}
-                    />
-                    <div className="flex justify-between text-xs text-slate-500">
-                      <span>Good</span>
-                      <span>Moderate</span>
-                      <span>Unhealthy</span>
-                      <span>Hazardous</span>
+                    <div className="mt-4">
+                      <Progress
+                        value={(pollutionData.aqi / 500) * 100}
+                        className="h-3 rounded-full bg-gradient-to-r from-green-200 via-yellow-200 via-50% via-orange-200 to-red-300 dark:from-green-900 dark:via-yellow-900 dark:to-red-900 shadow-md"
+                        indicatorClassName={cn("transition-all rounded-full shadow-lg", pollutionLevels[pollutionData.level].color)}
+                      />
+                      <div className="flex justify-between text-xs text-slate-500">
+                        <span>Good</span>
+                        <span>Moderate</span>
+                        <span>Unhealthy</span>
+                        <span>Hazardous</span>
+                      </div>
                     </div>
                   </div>
 
