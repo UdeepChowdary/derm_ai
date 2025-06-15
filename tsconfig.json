@@ -2,6 +2,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "lib": ["dom", "dom.iterable", "esnext"],
+    "typeRoots": ["./node_modules/@types"],
     "allowJs": true,
     "target": "ES6",
     "skipLibCheck": true,
@@ -25,6 +26,6 @@
       "@/src/*": ["src/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "./node_modules/@tensorflow-models/face-landmarks-detection/**/*.d.ts"],
   "exclude": ["node_modules"]
 }

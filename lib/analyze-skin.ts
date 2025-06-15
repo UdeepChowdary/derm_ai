@@ -3,11 +3,11 @@
 
 import { API_KEYS } from "@/config/api-keys"
 // Import TensorFlow.js and face detection
-import * as tf from '@tensorflow/tfjs';
+import * as tf from '@tensorflow/tfjs-core';
 import * as faceLandmarksDetection from '@tensorflow-models/face-landmarks-detection';
+
 import '@tensorflow/tfjs-backend-webgl';
 
-// Declare global tf for browser
 if (typeof window !== 'undefined') {
   (window as any).tf = tf;
 }
@@ -82,7 +82,7 @@ function generateUUID(): string {
 
 // Constants
 const API_URL = process.env.NEXT_PUBLIC_AUTODERM_API_URL || 'https://autoderm.ai/v1/query';
-const API_KEY = process.env.AUTODERM_API_KEY;
+const API_KEY = API_KEYS.AUTODERM_API_KEY;
 const MODEL = 'autoderm_v2_2';
 const LANGUAGE = 'en';
 
@@ -505,11 +505,11 @@ async function isHumanSkinImage(imageData: string): Promise<boolean> {
         // Check 1: Face landmarks (if available)
         if (face.keypoints) {
           // Robust feature presence checks
-          const keyNames = face.keypoints.map(kp => kp.name?.toLowerCase() || '');
-          const eyeCount = keyNames.filter(n => n.includes('eye')).length;
+          const keyNames = face.keypoints.map((kp: faceLandmarksDetection.Keypoint) => kp.name?.toLowerCase() || '');
+          const eyeCount = keyNames.filter((n: string) => n.includes('eye')).length;
           const hasEyes = eyeCount >= 2;            // both eyes ideally
-          const hasNose = keyNames.some(n => n.includes('nose'));
-          const hasMouth = keyNames.some(n => n.includes('mouth') || n.includes('lip'));
+          const hasNose = keyNames.some((n: string) => n.includes('nose'));
+          const hasMouth = keyNames.some((n: string) => n.includes('mouth') || n.includes('lip'));
 
           // Consider human-like if at least two of the three primary features are present,
           // or both eyes are detected (common for most photo angles)
@@ -543,9 +543,8 @@ async function isHumanSkinImage(imageData: string): Promise<boolean> {
         const basicSkinCheck = await basicSkinDetection(imageData);
         
         if (!basicSkinCheck) {
-          console.log('Basic skin detection failed, but facial verification sufficient — accepting image.');
-          // Proceed even if color/texture check is uncertain since facial landmarks passed
-          return true;
+          console.log('Basic skin detection failed, rejecting image.');
+          return false;
         }
         
         console.log('Human face and skin verified');
@@ -694,11 +693,11 @@ async function basicSkinDetection(imageData: string): Promise<boolean> {
         console.log(`Preliminary skin color percentage: ${preliminarySkinPercentage.toFixed(1)}%`);
 
         // Adaptive edge threshold based on skin color presence
-        const adaptiveEdgeThreshold = preliminarySkinPercentage > 5 ? 0.40 : 0.25;
+        const adaptiveEdgeThreshold = preliminarySkinPercentage > 5 ? 0.50 : 0.25;
         console.log(`Adaptive edge threshold: ${(adaptiveEdgeThreshold * 100).toFixed(1)}%`);
 
         // Early acceptance for high skin color percentage
-        if (preliminarySkinPercentage > 50 && edgeDensity <= 0.65) {
+        if (preliminarySkinPercentage > 50 && edgeDensity <= adaptiveEdgeThreshold) {
           console.log('High skin color percentage and acceptable edge density; accepting despite texture.');
           return resolve(true);
         }
@@ -771,7 +770,7 @@ async function basicSkinDetection(imageData: string): Promise<boolean> {
         }
         
         // Early acceptance for high preliminary skin percentage
-        if (preliminarySkinPercentage > 20 && edgeDensity < adaptiveEdgeThreshold) {
+        if (preliminarySkinPercentage > 50 && edgeDensity < adaptiveEdgeThreshold) {
           console.log('High preliminary skin percentage with acceptable texture — accepting image as human skin.');
           return resolve(true);
         }
@@ -785,7 +784,7 @@ async function basicSkinDetection(imageData: string): Promise<boolean> {
         
         // Adaptive thresholds based on image characteristics
         const isCloseUp = totalPixels < 300000;
-        let minSkinThreshold = isCloseUp ? 3 : 8;
+        let minSkinThreshold = isCloseUp ? 3 : 15;
         const maxTextureScore = isCloseUp ? 25 : 40;
         
         // Adjust for green-tinted images
