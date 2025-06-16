@@ -235,7 +235,7 @@ export default function ScanPage() {
                   <Camera className="mr-2 h-5 w-5" /> Capture Image
                 </Button>
                 <canvas ref={canvasRef} className="hidden" />
-                <div className="text-slate-400 text-center mt-2">Press Space or Enter key to capture when focused.</div>
+
               </div>
             )}
             {capturedImage && isAnalyzing && (

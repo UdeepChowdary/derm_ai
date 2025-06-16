@@ -1,7 +1,7 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import { Camera, CameraOff, RotateCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useCamera } from '@/hooks/use-camera';
+import { useCamera } from '@/src/hooks/use-camera';
 import { cn } from '@/lib/utils';
 
 interface CameraProps {
@@ -42,6 +42,17 @@ export function CameraComponent({
     }
   }, [autoStart, isActive, startCamera]);
 
+  const handleCapture = useCallback(async () => {
+    try {
+      const photo = await takePhoto();
+      if (photo) {
+        onCapture(photo);
+      }
+    } catch (error) {
+      console.error('Error capturing photo:', error);
+    }
+  }, [takePhoto, onCapture]);
+
   // Set the video source when the stream is available
   useEffect(() => {
     const video = videoRef.current;
@@ -56,16 +67,7 @@ export function CameraComponent({
     };
   }, [stream]);
 
-  const handleCapture = async () => {
-    try {
-      const photo = await takePhoto();
-      if (photo) {
-        onCapture(photo);
-      }
-    } catch (error) {
-      console.error('Error capturing photo:', error);
-    }
-  };
+
 
   const handleSwitchCamera = async () => {
     try {

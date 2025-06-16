@@ -54,7 +54,20 @@ export default function UploadPage() {
       setShowPhotoTips(true)
       localStorage.setItem('photo_tips_shown', 'true')
     }
-  }, [])
+
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if (!selectedImage && (event.key === ' ' || event.key === 'Enter')) {
+        event.preventDefault(); // Prevent default scroll behavior for spacebar
+        triggerFileInput();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyPress);
+    };
+  }, [selectedImage]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
