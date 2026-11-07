@@ -30,6 +30,7 @@ export default function ScanPage() {
 
   // Open camera on mount
   React.useEffect(() => {
+    let videoElement = videoRef.current
     if (showCamera && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       navigator.mediaDevices.getUserMedia({ 
         video: { 
@@ -40,6 +41,7 @@ export default function ScanPage() {
       })
         .then((stream) => {
           if (videoRef.current) {
+            videoElement = videoRef.current
             videoRef.current.srcObject = stream
             videoRef.current.play().catch((e) => {
               if (e.name !== "AbortError") {
@@ -54,8 +56,8 @@ export default function ScanPage() {
     }
     // Cleanup on unmount
     return () => {
-      if (videoRef.current && videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream
+      if (videoElement && videoElement.srcObject) {
+        const stream = videoElement.srcObject as MediaStream
         stream.getTracks().forEach((track) => track.stop())
       }
     }
@@ -114,6 +116,7 @@ export default function ScanPage() {
       }
 
       if (isSkinAnalysisResult(result)) {
+        setAnalysis(result)
         if (result.warning) {
           toast({
             title: 'Analysis Warning',
@@ -230,12 +233,21 @@ export default function ScanPage() {
           <CardContent className="flex flex-col items-center">
             {showCamera && (
               <div className="flex flex-col items-center gap-4 mt-4">
-                <video ref={videoRef} className="rounded-xl w-[340px] h-[340px] object-cover bg-black" autoPlay playsInline />
-                <Button onClick={capturePhoto} className="bg-[#14B8A6] text-white w-[340px]">
+                <div className="relative w-[340px] h-[340px]">
+                  <video ref={videoRef} className="rounded-xl w-full h-full object-cover bg-black" autoPlay playsInline muted>
+                    <track kind="captions" />
+                  </video>
+                  {/* Framing Guide Overlay */}
+                  <div className="absolute inset-0 pointer-events-none rounded-xl border-2 border-white/30">
+                    <div className="absolute inset-[15%] border-2 border-dashed border-teal-400/80 rounded-lg flex items-center justify-center">
+                      <span className="text-white/50 text-sm font-medium bg-black/20 px-2 py-1 rounded">Position condition here</span>
+                    </div>
+                  </div>
+                </div>
+                <Button onClick={capturePhoto} className="bg-[#14B8A6] hover:bg-[#0f9788] text-white w-[340px]">
                   <Camera className="mr-2 h-5 w-5" /> Capture Image
                 </Button>
                 <canvas ref={canvasRef} className="hidden" />
-
               </div>
             )}
             {capturedImage && isAnalyzing && (
@@ -262,7 +274,7 @@ export default function ScanPage() {
                   <CardHeader>
                     <CardTitle className="text-slate-900 dark:text-white mb-1">Diagnosis</CardTitle>
                     <div className="text-teal-400 font-semibold text-lg mb-1">
-                      <a href="#" className="hover:underline">{analysis.name}</a>
+                      <span className="hover:underline">{analysis.name}</span>
                     </div>
                     <CardDescription className="text-slate-300 dark:text-slate-400 mb-2">{analysis.description}</CardDescription>
                     <div className="text-slate-200 dark:text-slate-500 text-sm"><span className="font-semibold">Severity</span><br />{analysis.severity}</div>

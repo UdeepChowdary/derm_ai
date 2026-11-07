@@ -88,23 +88,4 @@ export function HoverAnimation({
   )
 }
 
-// Page transition component
-interface PageTransitionProps extends Omit<HTMLMotionProps<"div">, "children"> {
-  children: React.ReactNode
-  className?: string
-}
-
-export function PageTransition({ children, className, ...props }: PageTransitionProps) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.3 }}
-      className={cn("w-full", className)}
-      {...props}
-    >
-      {children}
-    </motion.div>
-  )
-} 
+ 

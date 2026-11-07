@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useAccessibility } from "./accessibility-provider"
-import { Mic, Volume2, VolumeX, Play, AlertCircle } from "lucide-react"
+import { Mic, VolumeX, Play, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 // Add type declarations for the Web Speech API
@@ -117,7 +117,7 @@ export function AudioAccessibility({ pageContent, audioDescription }: AudioAcces
     }
     
     // Listen for error events
-    const handleError = (event: ErrorEvent) => {
+    const handleError = () => {
       if (settings.audioFeedback) {
         speakText("An error occurred. Please try again.", true)
       }

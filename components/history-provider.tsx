@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode, useCallback } from "react"
 import { toast } from "@/components/ui/use-toast"
+import { get, set, del } from "idb-keyval"
 
 type Report = {
   id: string
@@ -14,12 +15,6 @@ type Report = {
   imageQuality?: number | null
 }
 
-// Type for reports stored in localStorage (with optional compressed image)
-type StoredReport = Omit<Report, 'imageUrl'> & {
-  imageUrl?: string
-  thumbnailUrl?: string
-}
-
 type HistoryContextType = {
   reports: Report[]
   addReport: (report: Report) => void
@@ -28,148 +23,76 @@ type HistoryContextType = {
 }
 
 const STORAGE_KEY = "dermascan-reports"
-const MAX_REPORTS = 15
-const MAX_IMAGE_SIZE = 50000 // Maximum length of base64 string for thumbnails
+const MAX_REPORTS = 50 // Increased limit since we are using IndexedDB
 
 const HistoryContext = createContext<HistoryContextType | undefined>(undefined)
 
-// Helper function to create a smaller thumbnail from base64 image
-const createThumbnail = async (base64Image: string): Promise<string> => {
-  return new Promise((resolve) => {
-    try {
-      // Create an image element to load the base64 data
-      const img = new Image()
-      img.onload = () => {
-        // Create a small thumbnail (max 200x200px)
-        const canvas = document.createElement('canvas')
-        const MAX_DIMENSION = 200
-        const scale = Math.min(MAX_DIMENSION / img.width, MAX_DIMENSION / img.height)
-        canvas.width = img.width * scale
-        canvas.height = img.height * scale
-        
-        // Draw the scaled image
-        const ctx = canvas.getContext('2d')
-        if (!ctx) {
-          resolve("")
-          return
-        }
-        
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-        
-        // Get thumbnail as base64 with reduced quality
-        const thumbnailUrl = canvas.toDataURL('image/jpeg', 0.6)
-        resolve(thumbnailUrl)
-      }
-      
-      img.onerror = () => resolve("")
-      img.src = base64Image
-    } catch (error) {
-      console.error("Error creating thumbnail:", error)
-      resolve("")
-    }
-  })
-}
-
-// Helper function to compress the report by creating a thumbnail and removing the full image
-const compressReport = async (report: Report): Promise<StoredReport> => {
-  if (!report.imageUrl) {
-    return report as StoredReport
-  }
-  
-  try {
-    // Create a thumbnail for storage
-    const thumbnailUrl = await createThumbnail(report.imageUrl)
-    
-    // Return report with thumbnail instead of full image
-    return {
-      ...report,
-      thumbnailUrl,
-      imageUrl: undefined // Don't store the full image in localStorage
-    }
-  } catch (error) {
-    console.error("Error compressing report:", error)
-    return {
-      ...report,
-      imageUrl: undefined // If compression fails, still remove the full image
-    }
-  }
-}
-
 export function HistoryProvider({ children }: { children: ReactNode }) {
   const [reports, setReports] = useState<Report[]>([])
+  const [isLoaded, setIsLoaded] = useState(false)
   
-  // Load reports from localStorage on initial render
+  // Load reports from IndexedDB on initial render
   useEffect(() => {
-    const loadReports = () => {
+    const loadReports = async () => {
       try {
-        const savedReports = localStorage.getItem(STORAGE_KEY)
-        if (savedReports) {
-          const parsedReports: StoredReport[] = JSON.parse(savedReports)
-          
-          // Convert stored reports back to regular reports
-          // Note: Full images are not stored in localStorage, only thumbnails
-          const loadedReports: Report[] = parsedReports.map(report => ({
-            ...report,
-            imageUrl: report.thumbnailUrl || '' // Use thumbnail as the imageUrl
+        // Backward compatibility: migrate existing localStorage data to IDB
+        const legacyReports = localStorage.getItem(STORAGE_KEY)
+        let loadedReports: Report[] = []
+        
+        if (legacyReports) {
+          const parsed = JSON.parse(legacyReports)
+          loadedReports = parsed.map((r: any) => ({
+            ...r,
+            imageUrl: r.thumbnailUrl || r.imageUrl || ''
           }))
-          
-          setReports(loadedReports)
+          // Save to IndexedDB and clear the legacy limit
+          await set(STORAGE_KEY, loadedReports)
+          localStorage.removeItem(STORAGE_KEY)
+        } else {
+          const idbReports = await get<Report[]>(STORAGE_KEY)
+          if (idbReports) {
+            loadedReports = idbReports
+          }
         }
+        
+        setReports(loadedReports)
       } catch (error) {
-        console.error("Failed to parse saved reports:", error)
-        localStorage.removeItem(STORAGE_KEY)
+        console.error("Failed to load saved reports:", error)
+      } finally {
+        setIsLoaded(true)
       }
     }
     
     loadReports()
   }, [])
   
-  // Save reports to localStorage whenever they change, with error handling
+  // Save reports to IndexedDB whenever they change
   useEffect(() => {
+    if (!isLoaded) return // Prevent overwriting IDB with empty state before initial load
+    
     const saveReports = async () => {
       if (reports.length === 0) {
-        localStorage.removeItem(STORAGE_KEY)
+        await del(STORAGE_KEY)
         return
       }
       
       try {
-        // Compress all reports before saving
-        const compressedReports: StoredReport[] = []
-        
-        for (const report of reports) {
-          const compressed = await compressReport(report)
-          compressedReports.push(compressed)
-        }
-        
-        // Try to save to localStorage
-        const serialized = JSON.stringify(compressedReports)
-        localStorage.setItem(STORAGE_KEY, serialized)
+        await set(STORAGE_KEY, reports)
       } catch (error) {
-        // Handle quota exceeded or other errors
-        console.error("Failed to save reports to localStorage:", error)
-        
-        if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-          // If quota exceeded, show error and try to reduce data
-          toast({
-            title: "Storage limit reached",
-            description: "Some historical data might be lost due to storage limitations.",
-            variant: "destructive",
-          })
-          
-          // Reduce number of reports and try again
-          if (reports.length > 5) {
-            setReports(prev => prev.slice(0, 5))
-          }
-        }
+        console.error("Failed to save reports to IndexedDB:", error)
+        toast({
+          title: "Storage error",
+          description: "Failed to save your report data.",
+          variant: "destructive",
+        })
       }
     }
     
     saveReports()
-  }, [reports])
+  }, [reports, isLoaded])
   
   const addReport = useCallback((report: Report) => {
     setReports(prevReports => {
-      // Check for duplicate - don't add if ID already exists
       if (prevReports.some(r => r.id === report.id)) {
         return prevReports
       }
@@ -177,9 +100,9 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
     })
   }, [])
   
-  const clearHistory = useCallback(() => {
+  const clearHistory = useCallback(async () => {
     setReports([])
-    localStorage.removeItem(STORAGE_KEY)
+    await del(STORAGE_KEY)
     toast({
       title: "History cleared",
       description: "All your skin analysis history has been removed.",

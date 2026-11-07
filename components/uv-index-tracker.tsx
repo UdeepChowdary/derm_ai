@@ -9,7 +9,6 @@ import { cn } from "@/lib/utils"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { API_KEYS } from "@/config/api-keys"
 import { toast } from "@/components/ui/use-toast"
 
 interface UVData {
@@ -52,35 +51,7 @@ const pollutionLevels = {
   "hazardous": { color: "bg-red-600", text: "Hazardous", max: 500 },
 }
 
-// Add this function after the interfaces and before the component
-const validateApiKey = (key: string): boolean => {
-  if (!key || key === 'your_openuv_key_here') {
-    console.error('Invalid OpenUV API key');
-    return false;
-  }
-  return true;
-};
-
-// Add this function after the interfaces
-const getUVFromOpenWeather = async (lat: number, lon: number): Promise<number> => {
-  try {
-    const response = await fetch(
-      `${API_KEYS.ENDPOINTS.OPENWEATHER}/uvi?lat=${lat}&lon=${lon}&appid=${API_KEYS.OPENWEATHER_API_KEY}`
-    );
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch UV data from OpenWeather');
-    }
-    
-    const data = await response.json();
-    return data.value; // OpenWeather returns UV index directly
-  } catch (error) {
-    console.error('Error fetching UV from OpenWeather:', error);
-    throw error;
-  }
-};
-
-// Add these utility functions at the top of the file, after imports
+// Cache duration for environmental data
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
 const getCachedData = (key: string) => {
@@ -111,12 +82,6 @@ const setCachedData = (key: string, data: any) => {
 };
 
 export function UVIndexTracker() {
-  // Debug log to check if API keys are loaded
-  React.useEffect(() => {
-    console.log('OpenUV API Key:', API_KEYS.OPENUV_API_KEY);
-    console.log('WAQI Token:', API_KEYS.WAQI_API_TOKEN);
-  }, []);
-
   const [uvData, setUVData] = React.useState<UVData | null>(null)
   const [pollutionData, setPollutionData] = React.useState<PollutionData | null>(null)
   const [isLoading, setIsLoading] = React.useState(false)
@@ -223,7 +188,7 @@ export function UVIndexTracker() {
     }
   }
 
-  const getUVData = async () => {
+  const fetchEnvironmentalData = async () => {
     setIsLoading(true);
     try {
       // Get user's location
@@ -235,194 +200,104 @@ export function UVIndexTracker() {
       });
       
       const { latitude, longitude } = position.coords;
-      const cacheKey = `uv_data_${latitude}_${longitude}`;
+      const uvCacheKey = `uv_data_${latitude}_${longitude}`;
+      const polCacheKey = `pollution_data_${latitude}_${longitude}`;
       
       // Check cache first
-      const cachedData = getCachedData(cacheKey);
-      if (cachedData) {
-        console.log('Using cached UV data');
-        setUVData(cachedData);
+      const cachedUV = getCachedData(uvCacheKey);
+      const cachedPollution = getCachedData(polCacheKey);
+      if (cachedUV && cachedPollution) {
+        console.log('Using cached environmental data');
+        setUVData(cachedUV);
+        setPollutionData(cachedPollution);
         setIsLoading(false);
         return;
       }
       
-      // Fetch location name using reverse geocoding
-      const geocodingResponse = await fetch(
-        `https://api.openweathermap.org/geo/1.0/reverse?lat=${latitude}&lon=${longitude}&limit=1&appid=${API_KEYS.OPENWEATHER_API_KEY}`
-      );
-      const geocodingData = await geocodingResponse.json();
-      const locationName = geocodingData[0]?.name || 'Your Location';
-      
-      let uvIndex: number;
-      let source = 'OpenUV';
-      
-      try {
-        // Try OpenUV first
-        console.log('Attempting to fetch from OpenUV API...');
-        const response = await fetch(
-          `${API_KEYS.ENDPOINTS.OPENUV}/uv?lat=${latitude}&lng=${longitude}`,
-          {
-            headers: {
-              'x-access-token': API_KEYS.OPENUV_API_KEY,
-              'Content-Type': 'application/json'
-            }
-          }
-        );
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => null);
-          console.error('OpenUV API Error:', {
-            status: response.status,
-            statusText: response.statusText,
-            error: errorData
-          });
-          throw new Error(`OpenUV API failed: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        if (!data.result || typeof data.result.uv === 'undefined') {
-          throw new Error('Invalid UV data received from OpenUV API');
-        }
-        
-        uvIndex = Math.round(data.result.uv);
-        console.log('Successfully fetched UV data from OpenUV:', uvIndex);
-      } catch (openUVError) {
-        console.log('Falling back to OpenWeather UV data due to:', openUVError);
-        source = 'OpenWeather';
-        uvIndex = await getUVFromOpenWeather(latitude, longitude);
-        console.log('Successfully fetched UV data from OpenWeather:', uvIndex);
+      // Fetch both UV and air quality from our secure backend proxy route
+      const response = await fetch(`/api/uv?lat=${latitude}&lon=${longitude}`);
+      if (!response.ok) {
+        throw new Error(`Server proxy error: ${response.status}`);
       }
       
-      const risk = determineUVRisk(uvIndex);
-      const protectionRecs = getProtectionRecommendations(risk);
-      
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to fetch environmental data');
+      }
+
+      // Process UV Data
+      const uvIndex = typeof data.uv?.index === 'number' ? data.uv.index : 5;
+      const uvRisk = determineUVRisk(uvIndex);
+      const uvSource = data.uv?.source || 'Estimated';
+      const locationName = data.uv?.location || 'Your Location';
+
       const newUVData: UVData = {
         index: uvIndex,
-        risk: risk,
-        protection: protectionRecs,
+        risk: uvRisk,
+        protection: getProtectionRecommendations(uvRisk),
         location: locationName,
         lastUpdated: new Date().toLocaleString(),
-        source: source
+        source: uvSource
       };
 
-      // Cache the new data
-      setCachedData(cacheKey, newUVData);
+      setCachedData(uvCacheKey, newUVData);
       setUVData(newUVData);
-      
+
+      // Process Pollution Data
+      const aqi = typeof data.pollution?.aqi === 'number' ? data.pollution.aqi : 45;
+      const polLevel = determinePollutionLevel(aqi);
+      const newPollutionData: PollutionData = {
+        aqi,
+        level: polLevel,
+        pollutants: data.pollution?.pollutants || { pm25: 12, pm10: 25, o3: 20, no2: 15 },
+        healthEffects: getHealthEffects(polLevel),
+        location: data.pollution?.location || locationName,
+        lastUpdated: new Date().toLocaleString(),
+      };
+
+      setCachedData(polCacheKey, newPollutionData);
+      setPollutionData(newPollutionData);
+
       toast({
-        title: "UV Data Updated",
-        description: `Current UV Index: ${uvIndex} (Data from ${source})`,
+        title: "Environmental Data Updated",
+        description: `UV: ${uvIndex} (${uvSource}), Air Quality: ${aqi}`,
         variant: "default",
       });
     } catch (error) {
-      console.error("Error getting UV data:", error);
-      // Fallback to mock data if all APIs fail
+      console.error("Error getting environmental data:", error);
+      // Fallback to estimated data if offline or unavailable
       const mockUVData: UVData = {
         index: 5,
         risk: "moderate",
-        protection: [
-          "Wear sunscreen with SPF 30+",
-          "Seek shade during midday hours",
-          "Wear protective clothing",
-          "Use UV-blocking sunglasses"
-        ],
+        protection: getProtectionRecommendations("moderate"),
         location: "Your Location",
         lastUpdated: new Date().toLocaleString() + " (Estimated)",
         source: "Estimated"
       };
       setUVData(mockUVData);
-      
+
+      const mockPollutionData: PollutionData = {
+        aqi: 75,
+        level: "moderate",
+        pollutants: { pm25: 15, pm10: 45, o3: 60, no2: 25 },
+        healthEffects: getHealthEffects("moderate"),
+        location: "Estimated Location",
+        lastUpdated: new Date().toLocaleString(),
+      };
+      setPollutionData(mockPollutionData);
+
       toast({
-        title: "UV Data Unavailable",
-        description: "Using estimated UV data. Please try again later.",
+        title: "Using Estimated Environmental Data",
+        description: "Could not retrieve live data. Showing estimates.",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
-  
-  const getPollutionData = async () => {
-    setIsLoading(true)
-    try {
-      // Get user's location
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject)
-      })
-      
-      const { latitude, longitude } = position.coords
-      
-      // Fetch air quality data from WAQI (World Air Quality Index) API
-      const waqiResponse = await fetch(
-        `https://api.waqi.info/feed/geo:${latitude};${longitude}/?token=${API_KEYS.WAQI_API_TOKEN}`
-      )
-      
-      if (!waqiResponse.ok) {
-        throw new Error('Failed to fetch air quality data')
-      }
-      
-      const waqiData = await waqiResponse.json()
-      if (waqiData.status !== 'ok') {
-        throw new Error('Invalid response from WAQI API')
-      }
-      
-      // Use city name from WAQI if available
-      let locationName = "Your Location"
-      if (waqiData.data?.city?.name) {
-        locationName = waqiData.data.city.name
-      }
-      
-      const aqi = waqiData.data.aqi as number
-      const pollutionLevel = determinePollutionLevel(aqi)
-      
-      // Extract pollutant concentrations if available
-      const iaqi = waqiData.data.iaqi || {}
-      const pm25 = iaqi.pm25?.v ?? 0
-      const pm10 = iaqi.pm10?.v ?? 0
-      const o3 = iaqi.o3?.v ?? 0
-      const no2 = iaqi.no2?.v ?? 0
-      
-      const newPollutionData: PollutionData = {
-        aqi: aqi,
-        level: pollutionLevel,
-        pollutants: {
-          pm25,
-          pm10,
-          o3,
-          no2,
-        },
-        healthEffects: getHealthEffects(pollutionLevel),
-        location: locationName,
-        lastUpdated: waqiData.data.time?.s || new Date().toLocaleString(),
-      }
 
-      setPollutionData(newPollutionData)
-    } catch (error) {
-      console.error("Error getting pollution data:", error)
-      // Fallback to mock data if API fails
-      const mockPollutionData: PollutionData = {
-        aqi: 75,
-        level: "moderate",
-        pollutants: {
-          pm25: 15,
-          pm10: 45,
-          o3: 60,
-          no2: 25,
-        },
-        healthEffects: [
-          "May cause respiratory irritation for sensitive groups",
-          "Consider limiting prolonged outdoor activities if sensitive",
-          "Keep windows closed if pollution is high",
-          "Use air purifiers indoors if available",
-        ],
-        location: "Your Location",
-        lastUpdated: new Date().toLocaleString() + " (Estimated)",
-      }
-      setPollutionData(mockPollutionData)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  const getUVData = fetchEnvironmentalData;
+  const getPollutionData = fetchEnvironmentalData;
 
   const toggleNotifications = () => {
     if (!notificationsEnabled) {
@@ -525,8 +400,7 @@ export function UVIndexTracker() {
                           className={cn(
                             "px-2 py-1 rounded-full text-white font-semibold shadow-md ring-2 ring-white/40 animate-pulse-glow",
                             uvRiskLevels[uvData.risk].color,
-                            "text-white",
-                            "hover:bg-[#14B8A6]"
+                            "text-white"
                           )}
                           style={{
                             boxShadow: `0 0 16px 4px ${uvRiskLevels[uvData.risk].color.includes('green') ? '#14B8A6' : uvRiskLevels[uvData.risk].color.includes('yellow') ? '#FACC15' : uvRiskLevels[uvData.risk].color.includes('orange') ? '#FB923C' : uvRiskLevels[uvData.risk].color.includes('red') ? '#EF4444' : '#A21CAF'}40` // 40 = 25% opacity
@@ -599,8 +473,7 @@ export function UVIndexTracker() {
                         className={cn(
                           "px-2 py-1",
                           pollutionLevels[pollutionData.level].color,
-                          "text-white",
-                          "hover:bg-[#14B8A6]"
+                          "text-white"
                         )}
                       >
                         {pollutionLevels[pollutionData.level].text}

@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { BottomNavigation } from "@/components/bottom-navigation"
-import { AccessibilitySettings } from "@/components/accessibility-settings"
 
 export default function AccessibilityPage() {
   const router = useRouter()

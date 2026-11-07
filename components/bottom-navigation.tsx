@@ -61,9 +61,9 @@ export function BottomNavigation({ currentPath }: BottomNavigationProps) {
                   transition={{ type: "spring", stiffness: 300, damping: 20 }}
                   className="mb-0.5"
                 >
-                  <item.icon className={cn("h-4 w-4", isActive && "[color:#14B8A6]")} />
+                  <item.icon className="h-4 w-4" />
                 </motion.div>
-                <span className={cn("text-[10px] font-medium truncate", isActive && "[color:#14B8A6]")}>{item.name}</span>
+                <span className="text-[10px] font-medium truncate">{item.name}</span>
               </Link>
             )
           })}

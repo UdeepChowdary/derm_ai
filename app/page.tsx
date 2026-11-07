@@ -8,10 +8,8 @@ import { useState } from "react"
 import { useToast } from "@/hooks/use-toast"
 
 export default function SplashScreen() {
-  // This page is just a redirect to the localized version
-  // The actual redirection happens in middleware.ts
   const { toast } = useToast()
-  const [logoClicks, setLogoClicks] = useState(0)
+  const [, setLogoClicks] = useState(0)
 
   const handleLogoInteraction = () => {
     setLogoClicks((prev) => {
@@ -50,7 +48,19 @@ export default function SplashScreen() {
 
       <div className="w-full max-w-md mx-auto text-center space-y-8 z-10">
         {/* Interactive Logo */}
-        <div className="flex justify-center items-center" onClick={handleLogoInteraction}>
+        <div 
+          className="flex justify-center items-center cursor-pointer" 
+          onClick={handleLogoInteraction}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleLogoInteraction();
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          aria-label="Interactive Derm AI Logo"
+        >
           <InteractiveLogo size="lg" className="mx-auto" />
         </div>
 
@@ -60,7 +70,7 @@ export default function SplashScreen() {
         <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md">
           <Quote className="w-8 h-8 text-teal-500 mb-2 mx-auto" />
           <p className="text-slate-600 dark:text-slate-300 italic">
-            "Healthy skin requires commitment, not a miracle. Take the first step today."
+            &ldquo;Healthy skin requires commitment, not a miracle. Take the first step today.&rdquo;
           </p>
         </div>
 

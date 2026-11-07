@@ -59,7 +59,7 @@ export default function HistoryPage() {
             {/* Reports List or Empty State */}
             {filteredReports.length === 0 ? (
               <div className="text-center">
-                <p className="text-slate-500 dark:text-slate-400 mb-6">You haven't created any reports yet{search ? " or no reports match your search." : "."}</p>
+                <p className="text-slate-500 dark:text-slate-400 mb-6">You haven&apos;t created any reports yet{search ? " or no reports match your search." : "."}</p>
                 <Link href="/home">
                   <Button className="px-8 py-3 text-base font-semibold bg-teal-500 hover:bg-teal-600">Create Your First Report</Button>
                 </Link>

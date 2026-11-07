@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useRef } from "react"
-import Head from "next/head"
 
 export function AnimatedFavicon() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -95,13 +94,5 @@ export function AnimatedFavicon() {
     }
   }, [])
 
-  return (
-    <>
-      <Head>
-        {/* This is just a placeholder, the actual favicon is set via JavaScript */}
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
-      <canvas ref={canvasRef} style={{ display: "none" }} />
-    </>
-  )
+  return <canvas ref={canvasRef} style={{ display: "none" }} />
 }

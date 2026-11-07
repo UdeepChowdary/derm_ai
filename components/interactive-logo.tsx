@@ -87,6 +87,9 @@ export function InteractiveLogo({ size = "md", className = "" }: InteractiveLogo
   return (
     <div
       ref={logoRef}
+      role="button"
+      tabIndex={0}
+      aria-label="Interactive logo"
       className={`relative ${sizeMap[size]} ${className} cursor-pointer transition-transform duration-300 ${
         isHovering ? "scale-110" : ""
       } ${isPressed ? "scale-95" : ""} flex items-center justify-center`}
@@ -95,6 +98,12 @@ export function InteractiveLogo({ size = "md", className = "" }: InteractiveLogo
       onMouseDown={() => setIsPressed(true)}
       onMouseUp={() => setIsPressed(false)}
       onClick={handleTap}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleTap();
+        }
+      }}
       onTouchStart={() => setIsPressed(true)}
       onTouchEnd={() => setIsPressed(false)}
     >

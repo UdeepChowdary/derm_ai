@@ -214,7 +214,7 @@ const getSeverityDetails = (severity: string) => {
   return severityMap[severity] || severityMap["Moderate"]
 }
 
-export function ConditionDetails({ condition, description, severity, risk }: ConditionDetailsProps) {
+export function ConditionDetails({ condition, severity }: ConditionDetailsProps) {
   // Convert condition to lowercase and remove any special characters for matching
   const normalizedCondition = condition.toLowerCase().replace(/[^a-z0-9]/g, '')
   

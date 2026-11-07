@@ -1,7 +1,3 @@
-// Toast notifications removed per user request
-// import { toast } from "@/hooks/use-toast"
-
-import { API_KEYS } from "@/config/api-keys"
 // Import TensorFlow.js and face detection
 import * as tf from '@tensorflow/tfjs-core';
 import * as faceLandmarksDetection from '@tensorflow-models/face-landmarks-detection';
@@ -9,7 +5,7 @@ import * as faceLandmarksDetection from '@tensorflow-models/face-landmarks-detec
 import '@tensorflow/tfjs-backend-webgl';
 
 if (typeof window !== 'undefined') {
-  (window as any).tf = tf;
+  (window as unknown as { tf: typeof tf }).tf = tf;
 }
 
 // Initialize face detection model
@@ -81,8 +77,7 @@ function generateUUID(): string {
 }
 
 // Constants
-const API_URL = process.env.NEXT_PUBLIC_AUTODERM_API_URL || 'https://autoderm.ai/v1/query';
-const API_KEY = API_KEYS.AUTODERM_API_KEY;
+const API_URL = '/api/analyze';
 const MODEL = 'autoderm_v2_2';
 const LANGUAGE = 'en';
 
@@ -203,15 +198,16 @@ function generateDefaultRecommendations(condition: string, severity: 'Low' | 'Mo
   return [...baseRecommendations, ...severityRecommendations[severity]];
 }
 
-// Helper function to generate prevention tips based on condition
-function generatePreventionTips(condition: string): string[] {
-  return [
+// Helper function to generate prevention tips
+function generatePreventionTips(condition?: string): string[] {
+  const tips = [
     'Maintain good skin hygiene.',
     'Use sunscreen with SPF 30 or higher daily.',
     'Stay hydrated and maintain a healthy diet.',
     'Avoid known triggers or irritants.',
     'Regular skin self-examinations.',
   ];
+  return condition ? tips : tips;
 }
 
 // Helper function to determine when to see a doctor based on confidence
@@ -291,12 +287,11 @@ async function loadFaceDetector() {
   }
 }
 
-// Enhanced texture analysis for human skin detection
-function analyzeTexture(imageData: ImageData): number {
+// Optional texture analysis helper for human skin detection
+export function analyzeTexture(imageData: ImageData): number {
   const data = imageData.data;
   let textureScore = 0;
   let sampleCount = 0;
-  let patternConsistency = 0;
   let edgeCount = 0;
   
   // Sample pixels in a grid pattern
@@ -610,7 +605,7 @@ async function basicSkinDetection(imageData: string): Promise<boolean> {
         
         // Calculate brightness and color statistics
         let minLum = 255, maxLum = 0;
-        let totalR = 0, totalG = 0, totalB = 0;
+        let totalR = 0, totalG = 0;
         let validPixels = 0;
         const lums = [];
         
@@ -630,14 +625,12 @@ async function basicSkinDetection(imageData: string): Promise<boolean> {
           
           totalR += r;
           totalG += g;
-          totalB += b;
           validPixels++;
         }
         
-        const avgR = totalR / validPixels;
-        const avgG = totalG / validPixels;
-        const avgB = totalB / validPixels;
-        const avgLum = lums.reduce((a, b) => a + b, 0) / validPixels;
+        const avgR = totalR / (validPixels || 1);
+        const avgG = totalG / (validPixels || 1);
+        const avgLum = lums.reduce((a, b) => a + b, 0) / (validPixels || 1);
         
         // Edge Detection Pass (for fur/feather detection)
         let edgePixels = 0;
@@ -653,8 +646,6 @@ async function basicSkinDetection(imageData: string): Promise<boolean> {
         
         for (let y = 1; y < height - 1; y += sampleStep) {
           for (let x = 1; x < width - 1; x += sampleStep) {
-            const idx = (y * width + x) * 4;
-            
             let gx = 0, gy = 0;
             for (let ky = -1, ki = 0; ky <= 1; ky++) {
               for (let kx = -1; kx <= 1; kx++, ki++) {
@@ -813,15 +804,6 @@ async function basicSkinDetection(imageData: string): Promise<boolean> {
 export async function analyzeSkinImage(imageData: string): Promise<AnalysisResult> {
   console.log('Starting skin image analysis...');
   
-  // If no API key is provided, return mock data
-  if (!API_KEYS.AUTODERM_API_KEY) {
-    console.warn('No API key provided');
-    return {
-      isNonSkinImage: true,
-      message: 'API key is not configured. Please contact support.'
-    };
-  }
-
   let warningMessage: string | undefined;
 
   try {
@@ -849,7 +831,7 @@ export async function analyzeSkinImage(imageData: string): Promise<AnalysisResul
       warningMessage = 'The image quality may be poor or the skin may not be clearly visible. Analysis results may be less accurate.';
     }
     
-    console.log('Proceeding with API analysis...');
+    console.log('Proceeding with API analysis via backend proxy...');
     
     // Convert base64 to blob
     const parts = imageData.split(';');
@@ -863,24 +845,18 @@ export async function analyzeSkinImage(imageData: string): Promise<AnalysisResul
     const byteArray = new Uint8Array(byteNumbers);
     const blob = new Blob([byteArray], { type: mimeType });
 
-    // Create form data
+    // Create form data for internal proxy route
     const formData = new FormData();
     formData.append('file', blob, 'image.jpg');
+    formData.append('model', MODEL);
+    formData.append('language', LANGUAGE);
+    formData.append('simple_names', 'true');
+    formData.append('anon_filter', 'false');
 
-    // Add query parameters
-    const params = new URLSearchParams();
-    params.append('model', MODEL);
-    params.append('language', LANGUAGE);
-    params.append('simple_names', 'true');
-    params.append('anon_filter', 'false');
-
-    console.log('Making API request...');
-    // Make API request
-    const response = await fetch(`${API_URL}?${params.toString()}`, {
+    console.log('Making API request to /api/analyze...');
+    // Make API request through secure server route (no API key in browser)
+    const response = await fetch(API_URL, {
       method: 'POST',
-      headers: {
-        'Api-Key': API_KEY,
-      },
       body: formData,
     });
 
@@ -921,6 +897,17 @@ export async function analyzeSkinImage(imageData: string): Promise<AnalysisResul
     const data = await response.json();
     console.log('API Response:', data);
 
+    // If server indicates demo mode (no API key on server), use sample data
+    if (data.demoMode) {
+      console.warn('Server running in Demo Mode, using sample analysis');
+      const mockResult = mockAnalysisResults[Math.floor(Math.random() * mockAnalysisResults.length)];
+      return {
+        ...mockResult,
+        id: generateUUID(),
+        warning: 'DEMO MODE: No API key configured on server. Showing sample analysis for demonstration purposes.',
+      };
+    }
+
     if (!data.success) {
       // Handle non-skin image case
       if (data.message && (data.message.includes('not of skin') || data.message.includes('no skin'))) {
@@ -936,6 +923,15 @@ export async function analyzeSkinImage(imageData: string): Promise<AnalysisResul
       return {
         isNonSkinImage: true,
         message: 'Unable to analyze the image. Please try again with a clearer photo.'
+      };
+    }
+
+    // Ensure predictions array is present and non-empty
+    if (!data.predictions || !Array.isArray(data.predictions) || data.predictions.length === 0) {
+      console.warn('API returned success but no predictions found');
+      return {
+        isNonSkinImage: true,
+        message: 'No clear skin condition could be detected from this image. Please try again with a clearer photo.'
       };
     }
 
@@ -956,10 +952,10 @@ export async function analyzeSkinImage(imageData: string): Promise<AnalysisResul
         mapConfidenceToSeverity(topPrediction.confidence)
       ),
       conditionDetails: {
-        symptoms: [],
-        causes: [],
+        symptoms: ["Noticeable visual changes in skin area", "Irregularity in skin texture or coloration"],
+        causes: ["Genetic, environmental, or immunological factors"],
         whenToSeeDoctor: getWhenToSeeDoctor(topPrediction.confidence),
-        treatmentOptions: [],
+        treatmentOptions: ["Consult a qualified dermatologist for a comprehensive in-person examination and personalized care plan."],
       },
       preventionTips: generatePreventionTips(topPrediction.name),
       additionalNotes: `ICD Code: ${topPrediction.icd}. For more information, visit: ${topPrediction.readMoreUrl}`,

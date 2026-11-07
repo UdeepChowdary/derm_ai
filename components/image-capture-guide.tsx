@@ -346,14 +346,11 @@ export function analyzeImageQuality(imageData: string): Promise<ImageQualityResu
       
       // Focus estimation (this is a simple approximation)
       // We use edge detection to estimate focus
-      const edgeData = ctx.createImageData(canvas.width, canvas.height);
-      const edgePixels = edgeData.data;
       let edgeSum = 0;
       
       // Simple edge detection
       for (let y = 1; y < canvas.height - 1; y++) {
         for (let x = 1; x < canvas.width - 1; x++) {
-          const pos = (y * canvas.width + x) * 4;
           const posUp = ((y - 1) * canvas.width + x) * 4;
           const posDown = ((y + 1) * canvas.width + x) * 4;
           const posLeft = (y * canvas.width + (x - 1)) * 4;

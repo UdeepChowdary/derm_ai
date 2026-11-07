@@ -8,10 +8,8 @@ import {
   ArrowLeft, 
   Calendar, 
   Info, 
-  Shield, 
-  TrendingUp, 
-  FileText, 
-  Activity 
+  FileText,
+  Share2
 } from "lucide-react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
@@ -27,9 +25,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Share2 } from "lucide-react"
 import React from "react"
-import { ConditionDetails } from "@/components/condition-details"
 
 type ReportParams = {
   params: Promise<{ id: string }>
@@ -54,7 +50,6 @@ export default function ReportPage({ params }: ReportParams) {
     const foundReport = reports.find((r) => r.id === id);
     
     if (foundReport) {
-      console.log("Found report:", foundReport);
       setReport(foundReport);
       
       // Find previous reports for the same condition (for trend analysis)
@@ -73,14 +68,12 @@ export default function ReportPage({ params }: ReportParams) {
     }
     
     // If not found immediately, wait a bit and check again
-    // (in case the state update is still in progress)
     const timer = setTimeout(() => {
       const foundReport = reports.find((r) => r.id === id);
       if (foundReport) {
         setReport(foundReport);
         setIsLoading(false);
         
-        // Also update previous reports if needed
         const condition = foundReport.condition?.toLowerCase();
         const previousRelatedReports = reports
           .filter(r => 
@@ -92,10 +85,9 @@ export default function ReportPage({ params }: ReportParams) {
         
         setPreviousReports(previousRelatedReports);
       } else {
-        console.error("Report not found after delay, redirecting to home");
         router.push("/home");
       }
-    }, 1000); // Wait 1 second before giving up
+    }, 1000);
     
     return () => clearTimeout(timer);
   }, [id, reports, router])
@@ -135,7 +127,6 @@ export default function ReportPage({ params }: ReportParams) {
     if (!reportRef.current) return
 
     try {
-      // Hide the share button during export by setting a class
       const buttonContainer = document.getElementById('share-button-container')
       if (buttonContainer) {
         buttonContainer.style.display = 'none'
@@ -148,7 +139,6 @@ export default function ReportPage({ params }: ReportParams) {
       })
 
       if (format === 'image') {
-        // Share as image
         const imageData = canvas.toDataURL('image/png')
         const link = document.createElement('a')
         link.href = imageData
@@ -157,7 +147,6 @@ export default function ReportPage({ params }: ReportParams) {
         link.click()
         document.body.removeChild(link)
       } else {
-        // Share as PDF
         const imgData = canvas.toDataURL('image/png')
         const pdf = new jsPDF({
           orientation: 'portrait',
@@ -168,7 +157,6 @@ export default function ReportPage({ params }: ReportParams) {
         pdf.save(`derm-report-${report.id}.pdf`)
       }
 
-      // Restore the share button after export
       if (buttonContainer) {
         buttonContainer.style.display = 'block'
       }
@@ -179,8 +167,6 @@ export default function ReportPage({ params }: ReportParams) {
       });
     } catch (error) {
       console.error('Error sharing report:', error)
-      
-      // Restore the share button in case of error
       const errorButtonContainer = document.getElementById('share-button-container')
       if (errorButtonContainer) {
         errorButtonContainer.style.display = 'block'
@@ -195,28 +181,32 @@ export default function ReportPage({ params }: ReportParams) {
   }
 
   // Calculate risk score (0-100) based on severity
-  const calculateRiskScore = (severityString: string) => {
+  const calculateRiskScore = (severity?: string) => {
     const severityMap: Record<string, number> = {
+      "Low": 25,
       "Mild": 25,
       "Moderate": 50,
+      "High": 75,
       "Severe": 75,
       "Critical": 100
     };
-    
-    return severityMap[report.severity] || 50;
+    return severityMap[severity || ""] || 50;
   };
   
   // Get color class based on severity level
-  const getSeverityColor = (severityString: string) => {
+  const getSeverityColor = (severity?: string) => {
     const colorMap: Record<string, string> = {
+      "Low": "bg-green-500",
       "Mild": "bg-green-500",
       "Moderate": "bg-yellow-500",
+      "High": "bg-orange-500",
       "Severe": "bg-orange-500",
       "Critical": "bg-red-500"
     };
-    
-    return colorMap[report.severity] || "bg-yellow-500";
+    return colorMap[severity || ""] || "bg-yellow-500";
   };
+
+  const riskScore = report.riskScore ?? calculateRiskScore(report.severity);
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-900">
@@ -234,7 +224,6 @@ export default function ReportPage({ params }: ReportParams) {
           onValueChange={setActiveTab}
           className="mb-6"
         >
-          {/* Only displaying Overview tab */}
           <TabsList className="grid grid-cols-1 mb-4">
             <TabsTrigger value="overview">
               <FileText className="h-4 w-4 mr-2" />
@@ -285,15 +274,15 @@ export default function ReportPage({ params }: ReportParams) {
                     <h4 className="font-medium text-slate-700 dark:text-slate-200 text-lg">Severity Assessment</h4>
                     <div className="space-y-2">
                       <div className="flex justify-between text-xs text-slate-500">
-                        <span>Mild</span>
+                        <span>Low / Mild</span>
                         <span>Moderate</span>
-                        <span>Severe</span>
+                        <span>High / Severe</span>
                         <span>Critical</span>
                       </div>
                       <div className="h-3 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                         <div 
                           className={`h-full ${getSeverityColor(report.severity)} transition-all duration-500`} 
-                          style={{ width: `${report.riskScore}%` }}
+                          style={{ width: `${riskScore}%` }}
                         ></div>
                       </div>
                       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
@@ -304,7 +293,7 @@ export default function ReportPage({ params }: ReportParams) {
                           </p>
                         </div>
                         <span className="text-sm bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-300 px-3 py-1 rounded-full">
-                          Risk Score: {report.riskScore}%
+                          Risk Score: {riskScore}%
                         </span>
                       </div>
                     </div>
@@ -373,7 +362,6 @@ export default function ReportPage({ params }: ReportParams) {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {/* Recommendations */}
                   <div>
                     <h3 className="font-medium text-slate-700 dark:text-slate-200 mb-3 text-lg">Immediate Steps</h3>
                     <ul className="space-y-3">
@@ -388,7 +376,6 @@ export default function ReportPage({ params }: ReportParams) {
                     </ul>
                   </div>
 
-                  {/* Prevention Tips */}
                   {report.preventionTips && report.preventionTips.length > 0 && (
                     <div>
                       <h3 className="font-medium text-slate-700 dark:text-slate-200 mb-3 text-lg">Prevention Tips</h3>
@@ -408,7 +395,6 @@ export default function ReportPage({ params }: ReportParams) {
                     </div>
                   )}
 
-                  {/* Additional Notes */}
                   {report.additionalNotes && (
                     <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                       <h3 className="font-medium text-blue-700 dark:text-blue-300 mb-2 flex items-center">
@@ -428,6 +414,39 @@ export default function ReportPage({ params }: ReportParams) {
               </CardContent>
             </Card>
 
+            {/* Past Scans for this condition */}
+            {previousReports.length > 0 && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <h2 className="text-xl font-semibold text-slate-800 dark:text-white">Past Scans for this Condition</h2>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {previousReports.map((prev) => (
+                      <div 
+                        key={prev.id} 
+                        onClick={() => router.push(`/report/${prev.id}`)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            router.push(`/report/${prev.id}`);
+                          }
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors"
+                      >
+                        <div>
+                          <p className="font-medium text-slate-700 dark:text-slate-200">{formatDate(prev.date)}</p>
+                          <p className="text-xs text-slate-500">{prev.severity} Severity</p>
+                        </div>
+                        <span className="text-xs text-teal-600 dark:text-teal-400 font-medium">View Report &rarr;</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Disclaimer with interactive logo watermark */}
             <Card className="bg-amber-50 dark:bg-amber-950/30 border-[color:hsl(var(--border))] dark:border-amber-900/50 relative overflow-hidden">
               <div className="absolute right-4 bottom-4 opacity-5 flex items-center justify-center">
@@ -444,11 +463,9 @@ export default function ReportPage({ params }: ReportParams) {
               </CardContent>
             </Card>
           </TabsContent>
-          
-          {/* Details and Trends tabs have been removed */}
         </Tabs>
         
-        {/* Share Button - outside the reportRef div so it won't be included in exports */}
+        {/* Share Button */}
         <div id="share-button-container" className="mt-6">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

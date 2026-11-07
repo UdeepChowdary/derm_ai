@@ -18,12 +18,10 @@ import { useRouter } from "next/navigation"
 import { useRef, useState, useEffect } from "react"
 import { useHistory } from "@/components/history-provider"
 import Image from "next/image"
-import { analyzeSkinImage, isSkinAnalysisResult, isNonSkinImageResult } from "@/lib/analyze-skin"
+import { analyzeSkinImage, isNonSkinImageResult } from "@/lib/analyze-skin"
 import { LoadingLogo } from "@/components/loading-logo"
 import { toast } from "@/components/ui/use-toast"
 import { Progress } from "@/components/ui/progress"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
 import { ImageCaptureGuide, ImageQualityAssessment } from "@/components/image-capture-guide"
 
 interface ImageQualityResult {

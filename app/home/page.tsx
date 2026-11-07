@@ -12,7 +12,7 @@ import { PageTransition } from "@/components/page-transition"
 export default function HomePage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error] = useState<string | null>(null)
 
   const handleScan = () => {
     setIsLoading(true)

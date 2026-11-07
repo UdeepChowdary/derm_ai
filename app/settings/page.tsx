@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { BottomNavigation } from "@/components/bottom-navigation"
-import { AlertTriangle, Moon, Sun, Trash2 } from "lucide-react"
+import { AlertTriangle, Trash2, Accessibility } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useHistory } from "@/components/history-provider"
-import { ThemeCustomizer } from "@/components/theme-customizer"
+import Link from "next/link"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -85,6 +85,23 @@ export default function SettingsPage() {
                     checked={theme === "dark"}
                     onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
                   />
+                </div>
+
+                <div className="border-t border-slate-100 dark:border-slate-800 my-4" />
+
+                <div className="flex items-center justify-between py-2">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Accessibility className="h-5 w-5 text-teal-500 dark:text-teal-400" />
+                      <span className="font-medium">Accessibility Guide</span>
+                    </div>
+                    <span className="text-sm text-slate-500">Read our commitment and list of voice commands</span>
+                  </div>
+                  <Link href="/accessibility">
+                    <Button variant="outline" size="sm" className="!border-teal-500 !text-teal-500 dark:!border-teal-600 dark:!text-teal-400">
+                      View Guide
+                    </Button>
+                  </Link>
                 </div>
               </CardContent>
             </Card>

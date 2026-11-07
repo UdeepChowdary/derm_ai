@@ -1,14 +1,12 @@
 "use client"
 
-import { PageTransition } from "@/components/animated-section"
+import { PageTransition } from "@/components/page-transition"
 import { UVIndexTracker } from "@/components/uv-index-tracker"
 import { BottomNavigation } from "@/components/bottom-navigation"
-import { useTheme } from "next-themes"
 import { motion } from "framer-motion"
-import { Moon, Sun } from "lucide-react"
+import { Sun } from "lucide-react"
 
 export default function UVPage() {
-  const { theme } = useTheme()
   return (
     <div className="min-h-screen bg-gradient-to-b from-teal-50 via-blue-50 to-white dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 relative">
       {/* Background Pattern (subtle dots, like home page) */}
@@ -37,4 +35,4 @@ export default function UVPage() {
       <BottomNavigation currentPath="/uv" />
     </div>
   )
-} 
+}

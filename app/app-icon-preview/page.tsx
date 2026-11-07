@@ -176,7 +176,7 @@ export default function AppIconPreviewPage() {
 
           <div className="space-y-4 text-slate-600 dark:text-slate-300">
             <p>
-              <strong>Web:</strong> The animated favicon is implemented using Canvas API and updates in real-time. It's
+              <strong>Web:</strong> The animated favicon is implemented using Canvas API and updates in real-time. It&apos;s
               already active in your browser tab.
             </p>
 
@@ -191,7 +191,7 @@ export default function AppIconPreviewPage() {
             </p>
 
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-4">
-              Note: Platform support for animated app icons varies. iOS doesn't support animated home screen icons
+              Note: Platform support for animated app icons varies. iOS doesn&apos;t support animated home screen icons
               natively, but does support Live Activity animations. Android supports limited animations through Adaptive
               Icons.
             </p>
